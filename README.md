@@ -10,7 +10,7 @@
 ## 功能特性
 
 - **中文身份生成**: 专门生成逼真的中文身份信息（姓名、地址、身份证号等）
-- **多种输出格式**: JSON、CSV、表格、纯文本
+- **多种输出格式**: JSON、CSV、表格、纯文本、SQL、Markdown、YAML、vCard
 - **批量生成**: 单次可生成 1-10,000 个身份
 - **字段定制**: 选择包含或排除特定字段
 - **可重复生成**: 支持随机种子，确保结果可复现
@@ -87,7 +87,7 @@ identity-gen [OPTIONS]
 选项:
   -l, --locale TEXT       语言环境 (默认: zh_CN)
   -n, --count INTEGER     生成数量 (默认: 1)
-  -f, --format [json|csv|table|raw]  输出格式 (优先级: --format > 文件后缀 > 默认csv)
+  -f, --format [json|csv|table|raw|sql|markdown|yaml|vcard]  输出格式 (优先级: --format > 文件后缀 > 默认csv)
   -o, --output PATH       输出文件路径 (根据后缀自动检测格式)
   --stdout                输出到终端而不是文件
   -i, --include TEXT      包含的字段 (可多次使用)
@@ -179,14 +179,18 @@ identity-gen --seed 42 --count 5
 
 ### 可用字段
 
-#### 个人信息
+#### 个人信息（9个）
 - `name` - 全名
 - `first_name` - 名
 - `last_name` - 姓
 - `birthdate` - 出生日期
 - `ssn` - 身份证号
+- `ethnicity` - 民族（56个民族，按人口比例分布）
+- `blood_type` - 血型（A/B/AB/O型 + RH阴性/阳性）
+- `height` - 身高（厘米，基于性别正态分布）
+- `weight` - 体重（公斤，基于BMI计算）
 
-#### 联系方式
+#### 联系方式（7个）
 - `email` - 邮箱地址
 - `phone` - 电话号码
 - `address` - 街道地址
@@ -195,13 +199,25 @@ identity-gen --seed 42 --count 5
 - `zipcode` - 邮编
 - `country` - 国家
 
-#### 职业信息
+#### 职业信息（4个）
 - `company` - 公司名称
 - `job_title` - 职位
+- `education` - 学历（小学/初中/高中/中专/大专/本科/硕士/博士）
+- `major` - 专业（80+个专业）
 
-#### 账户信息
+#### 账户信息（4个）
 - `username` - 用户名
 - `password` - 密码（12位，包含大小写、数字和特殊字符）
+- `wechat_id` - 微信号
+- `qq_number` - QQ号
+
+#### 社会信息（2个）
+- `political_status` - 政治面貌（群众/团员/党员/民主党派等13种）
+- `marital_status` - 婚姻状况（未婚/已婚/离异/丧偶，按年龄分布）
+
+#### 财务信息（2个）
+- `bank_card` - 银行卡号（银联卡，符合Luhn算法）
+- `license_plate` - 车牌号（普通/新能源车牌）
 
 ### 语言环境
 
@@ -249,6 +265,41 @@ name,email,phone
 张三,zhangsan@example.com,13800138000
 ```
 
+### SQL 格式
+
+```sql
+INSERT INTO identities (name, email, phone) VALUES ('张三', 'zhangsan@example.com', '13800138000');
+```
+
+### Markdown 格式
+
+```markdown
+| name | email | phone |
+| --- | --- | --- |
+| 张三 | zhangsan@example.com | 13800138000 |
+```
+
+### YAML 格式
+
+```yaml
+- identity_1:
+    name: "张三"
+    email: "zhangsan@example.com"
+    phone: "13800138000"
+```
+
+### vCard 格式
+
+```vcard
+BEGIN:VCARD
+VERSION:3.0
+N:张;三;;;
+FN:张三
+EMAIL:zhangsan@example.com
+TEL:13800138000
+END:VCARD
+```
+
 ## 开发
 
 ### 项目结构
@@ -262,7 +313,16 @@ identity-gen/
 │       ├── generator.py      # 身份生成逻辑
 │       ├── china_data.py     # 中文行政区划、姓名、公司数据
 │       ├── models.py         # Pydantic 数据模型
-│       └── formatters.py     # 输出格式化（JSON/CSV/TABLE/RAW）
+│       ├── formatters.py     # 输出格式化（JSON/CSV/TABLE/RAW/SQL/Markdown/YAML/vCard）
+│       └── data/             # 数据文件
+│           ├── names.json    # 姓名数据（300+姓氏）
+│           ├── jobs.json     # 职位数据（390+职位）
+│           ├── companies.json # 公司数据
+│           ├── ethnicities.json # 56个民族数据
+│           ├── education.json # 学历和专业数据
+│           ├── political.json # 政治面貌数据
+│           ├── marital.json  # 婚姻状况数据
+│           └── medical.json  # 血型数据
 ├── tests/                    # 测试套件
 ├── pyproject.toml            # 项目配置
 ├── requirements.txt          # 依赖
@@ -329,7 +389,16 @@ for identity in identities:
 
 ## 版本历史
 
-- **v0.2.0** - 当前版本，专注于中文身份信息生成
+- **v0.3.1** - 当前版本，优化数据真实性：添加基于2020年人口普查的姓氏频率分布、运营商市场份额分布
+  - 改进代码文档质量，所有函数添加完整文档字符串
+  - 姓氏生成使用真实频率数据（王、李、张等大姓概率更高）
+  - 手机号生成按运营商市场份额分布（移动58%、联通26%、电信15%）
+  - 其他数据生成逻辑优化
+- **v0.3.0** - 新增10个中国特有身份信息字段，支持8种输出格式
+  - 新增字段：民族、学历、专业、政治面貌、婚姻状况、血型、身高、体重、银行卡号、微信号、QQ号、车牌号
+  - 新增格式：SQL、Markdown、YAML、vCard
+  - 扩展姓名数据库至300+姓氏
+- **v0.2.0** - 专注于中文身份信息生成
 - **v0.1.0** - 初始版本
 
 ## 许可证
