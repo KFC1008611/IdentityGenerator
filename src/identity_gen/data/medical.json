@@ -1,0 +1,12 @@
+{
+  "blood_types": [
+    {"type": "A型", "probability": 0.28},
+    {"type": "B型", "probability": 0.24},
+    {"type": "AB型", "probability": 0.08},
+    {"type": "O型", "probability": 0.40}
+  ],
+  "rh_factor": {
+    "positive": 0.995,
+    "negative": 0.005
+  }
+}

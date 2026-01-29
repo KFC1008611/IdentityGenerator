@@ -1,0 +1,32 @@
+{
+  "political_statuses": [
+    {"status": "群众", "code": "01", "probability": 0.65, "min_age": 18, "max_age": 100},
+    {"status": "共青团员", "code": "02", "probability": 0.18, "min_age": 14, "max_age": 28},
+    {"status": "中共党员", "code": "03", "probability": 0.12, "min_age": 18, "max_age": 100},
+    {"status": "中共预备党员", "code": "04", "probability": 0.02, "min_age": 18, "max_age": 45},
+    {"status": "民革党员", "code": "05", "probability": 0.003, "min_age": 18, "max_age": 80},
+    {"status": "民盟盟员", "code": "06", "probability": 0.003, "min_age": 18, "max_age": 80},
+    {"status": "民建会员", "code": "07", "probability": 0.003, "min_age": 18, "max_age": 80},
+    {"status": "民进会员", "code": "08", "probability": 0.002, "min_age": 18, "max_age": 80},
+    {"status": "农工党党员", "code": "09", "probability": 0.002, "min_age": 18, "max_age": 80},
+    {"status": "致公党党员", "code": "10", "probability": 0.002, "min_age": 18, "max_age": 80},
+    {"status": "九三学社社员", "code": "11", "probability": 0.002, "min_age": 18, "max_age": 80},
+    {"status": "台盟盟员", "code": "12", "probability": 0.001, "min_age": 18, "max_age": 80},
+    {"status": "无党派人士", "code": "13", "probability": 0.008, "min_age": 25, "max_age": 80}
+  ],
+  "party_abbreviations": {
+    "群众": "群众",
+    "共青团员": "团员",
+    "中共党员": "党员",
+    "中共预备党员": "预备党员",
+    "民革党员": "民革",
+    "民盟盟员": "民盟",
+    "民建会员": "民建",
+    "民进会员": "民进",
+    "农工党党员": "农工党",
+    "致公党党员": "致公党",
+    "九三学社社员": "九三学社",
+    "台盟盟员": "台盟",
+    "无党派人士": "无党派"
+  }
+}
