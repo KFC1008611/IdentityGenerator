@@ -270,10 +270,11 @@ def fields() -> None:
     console.print("\n[bold cyan]Available Identity Fields:[/bold cyan]\n")
 
     field_groups = {
-        "Personal": [
+        "Personal (基础信息)": [
             "name",
             "first_name",
             "last_name",
+            "gender",
             "birthdate",
             "ssn",
             "ethnicity",
@@ -281,11 +282,22 @@ def fields() -> None:
             "height",
             "weight",
         ],
-        "Contact": ["email", "phone", "address", "city", "state", "zipcode", "country"],
-        "Professional": ["company", "job_title", "education", "major"],
-        "Account": ["username", "password", "wechat_id", "qq_number"],
-        "Social": ["political_status", "marital_status"],
-        "Finance": ["bank_card", "license_plate"],
+        "Contact (联系方式)": [
+            "email",
+            "phone",
+            "address",
+            "city",
+            "state",
+            "zipcode",
+            "country",
+        ],
+        "Professional (职业信息)": ["company", "job_title", "education", "major"],
+        "Account (账户信息)": ["username", "password", "wechat_id", "qq_number"],
+        "Social (社会信息)": ["political_status", "marital_status", "religion"],
+        "Finance (财务信息)": ["bank_card", "license_plate", "social_credit_code"],
+        "Digital (数字身份)": ["ip_address", "mac_address"],
+        "Astrological (生辰信息)": ["zodiac_sign", "chinese_zodiac"],
+        "Additional (其他信息)": ["emergency_contact", "emergency_phone", "hobbies"],
     }
 
     for group, fields_list in field_groups.items():
