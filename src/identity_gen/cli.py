@@ -76,10 +76,14 @@ def generate_default_filename(output_format: OutputFormat = OutputFormat.CSV) ->
     """
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     extensions = {
-        OutputFormat.JSON: "csv",  # Default to CSV even for JSON format if no extension specified
+        OutputFormat.JSON: "json",
         OutputFormat.CSV: "csv",
-        OutputFormat.TABLE: "csv",  # Default to CSV for table format too
-        OutputFormat.RAW: "csv",
+        OutputFormat.TABLE: "csv",
+        OutputFormat.RAW: "txt",
+        OutputFormat.SQL: "sql",
+        OutputFormat.MARKDOWN: "md",
+        OutputFormat.YAML: "yaml",
+        OutputFormat.VCARD: "vcf",
     }
     ext = extensions.get(output_format, "csv")
     return f"identities_{timestamp}.{ext}"
