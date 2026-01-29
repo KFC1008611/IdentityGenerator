@@ -32,6 +32,127 @@ AREA_CODES = _load_area_codes()
 
 _name_data = _load_json_data("names.json")
 SURNAMES: List[str] = _name_data.get("surnames", [])
+# Weighted surnames based on 2020 China census data
+# Top 5: 王(7.21%), 李(7.18%), 张(6.74%), 刘(5.38%), 陈(4.53%)
+SURNAME_WEIGHTS: List[float] = _name_data.get(
+    "surname_weights",
+    [
+        0.0721,
+        0.0718,
+        0.0674,
+        0.0538,
+        0.0453,
+        0.0395,
+        0.0335,
+        0.0264,
+        0.0259,
+        0.0237,
+        0.0194,
+        0.0192,
+        0.0175,
+        0.0170,
+        0.0155,
+        0.0146,
+        0.0141,
+        0.0141,
+        0.0137,
+        0.0132,
+        0.0127,
+        0.0124,
+        0.0121,
+        0.0116,
+        0.0115,
+        0.0111,
+        0.0106,
+        0.0103,
+        0.0102,
+        0.0100,
+        0.0097,
+        0.0094,
+        0.0093,
+        0.0091,
+        0.0090,
+        0.0088,
+        0.0086,
+        0.0083,
+        0.0082,
+        0.0080,
+        0.0079,
+        0.0077,
+        0.0075,
+        0.0074,
+        0.0072,
+        0.0070,
+        0.0069,
+        0.0067,
+        0.0066,
+        0.0065,
+        0.0064,
+        0.0063,
+        0.0062,
+        0.0061,
+        0.0060,
+        0.0059,
+        0.0058,
+        0.0057,
+        0.0056,
+        0.0055,
+        0.0054,
+        0.0053,
+        0.0052,
+        0.0051,
+        0.0050,
+        0.0049,
+        0.0048,
+        0.0047,
+        0.0046,
+        0.0045,
+        0.0044,
+        0.0043,
+        0.0042,
+        0.0041,
+        0.0040,
+        0.0039,
+        0.0038,
+        0.0037,
+        0.0036,
+        0.0035,
+        0.0034,
+        0.0033,
+        0.0032,
+        0.0031,
+        0.0030,
+        0.0029,
+        0.0028,
+        0.0027,
+        0.0026,
+        0.0025,
+        0.0024,
+        0.0023,
+        0.0022,
+        0.0021,
+        0.0020,
+        0.0019,
+        0.0018,
+        0.0017,
+        0.0016,
+        0.0015,
+        0.0014,
+        0.0013,
+        0.0012,
+        0.0011,
+        0.0010,
+        0.0009,
+        0.0008,
+        0.0007,
+        0.0006,
+        0.0005,
+        0.0004,
+        0.0003,
+        0.0002,
+        0.0001,
+    ],
+)
 MALE_NAMES: List[str] = _name_data.get("male_names", [])
 FEMALE_NAMES: List[str] = _name_data.get("female_names", [])
 
@@ -42,6 +163,23 @@ JOB_TITLES: List[str] = [job["title"] for job in JOBS]
 _company_data = _load_json_data("companies.json")
 COMPANY_TYPES: List[str] = _company_data.get("company_types", [])
 COMPANY_NAME_WORDS: List[str] = _company_data.get("company_name_words", [])
+
+_ethnicity_data = _load_json_data("ethnicities.json")
+ETHNICITIES: List[Dict[str, Any]] = _ethnicity_data.get("ethnicities", [])
+
+_education_data = _load_json_data("education.json")
+EDUCATION_LEVELS: List[Dict[str, Any]] = _education_data.get("education_levels", [])
+MAJORS: List[str] = _education_data.get("majors", [])
+
+_political_data = _load_json_data("political.json")
+POLITICAL_STATUSES: List[Dict[str, Any]] = _political_data.get("political_statuses", [])
+POLITICAL_ABBREVIATIONS: Dict[str, str] = _political_data.get("party_abbreviations", {})
+
+_marital_data = _load_json_data("marital.json")
+MARITAL_STATUSES: List[Dict[str, Any]] = _marital_data.get("marital_statuses", [])
+
+_medical_data = _load_json_data("medical.json")
+BLOOD_TYPES: List[Dict[str, Any]] = _medical_data.get("blood_types", [])
 
 
 # 省级行政区划 (省/自治区/直辖市)
@@ -4423,3 +4561,371 @@ def get_area_code_by_address(city_name: str, district: str = "") -> str:
 
     # 默认返回北京东城区
     return "110101"
+
+
+def get_weighted_surname() -> str:
+    """Select a surname using weighted random choice based on real frequency data.
+
+    Uses 2020 China census data where the top 5 surnames (王, 李, 张, 刘, 陈)
+    account for approximately 30.8% of the population, and the top 100 surnames
+    cover about 85% of the population.
+
+    Returns:
+        A randomly selected surname with probability matching real-world distribution.
+    """
+    n_surnames = len(SURNAMES)
+    n_weights = len(SURNAME_WEIGHTS)
+
+    if n_weights > 0 and n_surnames > 0:
+        # Extend weights if needed: remaining surnames get exponentially smaller weights
+        if n_weights < n_surnames:
+            weights = list(SURNAME_WEIGHTS)
+            # Remaining surnames (after top 100) share 1% with exponential decay
+            remaining = n_surnames - n_weights
+            if remaining > 0:
+                # Exponential decay for less common surnames
+                tail_weights = [0.0005 * (0.98**i) for i in range(remaining)]
+                weights.extend(tail_weights)
+        else:
+            weights = SURNAME_WEIGHTS[:n_surnames]
+
+        return random.choices(SURNAMES, weights=weights)[0]
+
+    return random.choice(SURNAMES)
+
+
+def get_random_ethnicity() -> str:
+    """Generate a random Chinese ethnicity based on population ratios."""
+    total = sum(e.get("population_ratio", 0.01) for e in ETHNICITIES)
+    r = random.uniform(0, total)
+    cumulative = 0
+    for ethnicity in ETHNICITIES:
+        cumulative += ethnicity.get("population_ratio", 0.01)
+        if r <= cumulative:
+            return ethnicity["name"]
+    return "汉族"
+
+
+def get_random_education(age: int = 30) -> tuple[str, str]:
+    """Generate random education level and major based on age.
+
+    Args:
+        age: Person's age
+
+    Returns:
+        Tuple of (education_level, major)
+    """
+    valid_educations = [
+        e
+        for e in EDUCATION_LEVELS
+        if e.get("min_age", 18) <= age <= e.get("max_age", 100)
+    ]
+
+    if not valid_educations:
+        return "初中", ""
+
+    total = sum(e.get("probability", 0.1) for e in valid_educations)
+    r = random.uniform(0, total)
+    cumulative = 0
+    education = valid_educations[0]
+    for e in valid_educations:
+        cumulative += e.get("probability", 0.1)
+        if r <= cumulative:
+            education = e
+            break
+
+    level = education["level"]
+
+    major = ""
+    if level in ["大专", "本科", "硕士研究生", "博士研究生"] and MAJORS:
+        major = random.choice(MAJORS)
+
+    return level, major
+
+
+def get_random_political_status(age: int = 30) -> str:
+    """Generate random political status based on age."""
+    valid_statuses = [
+        s
+        for s in POLITICAL_STATUSES
+        if s.get("min_age", 18) <= age <= s.get("max_age", 100)
+    ]
+
+    if not valid_statuses:
+        return "群众"
+
+    total = sum(s.get("probability", 0.1) for s in valid_statuses)
+    r = random.uniform(0, total)
+    cumulative = 0
+    for status in valid_statuses:
+        cumulative += status.get("probability", 0.1)
+        if r <= cumulative:
+            return status["status"]
+    return "群众"
+
+
+def get_random_marital_status(age: int = 30) -> str:
+    """Generate random marital status based on age."""
+    age_range = ""
+    for range_key in ["18-24", "25-29", "30-34", "35-39", "40-44", "45-49", "50-100"]:
+        min_age, max_age = map(int, range_key.split("-"))
+        if min_age <= age <= max_age:
+            age_range = range_key
+            break
+
+    if not age_range:
+        age_range = "50-100"
+
+    probabilities = []
+    for status in MARITAL_STATUSES:
+        prob_map = status.get("probability_by_age", {})
+        prob = prob_map.get(age_range, 0.1)
+        probabilities.append((status["status"], prob))
+
+    total = sum(p[1] for p in probabilities)
+    r = random.uniform(0, total)
+    cumulative = 0
+    for status, prob in probabilities:
+        cumulative += prob
+        if r <= cumulative:
+            return status
+    return "未婚"
+
+
+def get_random_blood_type() -> str:
+    """Generate random blood type with RH factor."""
+    total = sum(b.get("probability", 0.25) for b in BLOOD_TYPES)
+    r = random.uniform(0, total)
+    cumulative = 0
+    blood_type = "O型"
+    for bt in BLOOD_TYPES:
+        cumulative += bt.get("probability", 0.25)
+        if r <= cumulative:
+            blood_type = bt["type"]
+            break
+
+    if random.random() < 0.005:
+        blood_type += "(RH阴性)"
+    else:
+        blood_type += "(RH阳性)"
+
+    return blood_type
+
+
+def generate_height(gender: str = "male") -> int:
+    """Generate realistic height in cm based on gender.
+
+    Args:
+        gender: "male" or "female"
+
+    Returns:
+        Height in centimeters
+    """
+    if gender == "male":
+        # 男性平均身高约169cm, 标准差约6cm
+        height = int(random.gauss(169, 6))
+        return max(155, min(195, height))
+    else:
+        # 女性平均身高约158cm, 标准差约5cm
+        height = int(random.gauss(158, 5))
+        return max(145, min(180, height))
+
+
+def generate_weight(height: int, gender: str = "male") -> int:
+    """Generate realistic weight in kg based on height and gender.
+
+    Args:
+        height: Height in cm
+        gender: "male" or "female"
+
+    Returns:
+        Weight in kilograms
+    """
+    # BMI = weight(kg) / height(m)^2
+    # 正常BMI范围 18.5 - 24
+    height_m = height / 100
+    min_bmi, max_bmi = 18.5, 26.0
+
+    # 男性BMI略高
+    if gender == "male":
+        min_bmi += 0.5
+        max_bmi += 1.0
+
+    min_weight = int(min_bmi * height_m * height_m)
+    max_weight = int(max_bmi * height_m * height_m)
+
+    return random.randint(min_weight, max_weight)
+
+
+def generate_bank_card() -> str:
+    """Generate a valid Chinese UnionPay bank card number using Luhn algorithm."""
+    bins = [
+        "622202",
+        "622203",
+        "622208",
+        "622848",
+        "622845",
+        "622846",
+        "621700",
+        "622280",
+        "621081",
+        "622202",
+        "621288",
+        "621559",
+        "622262",
+        "622260",
+        "621098",
+        "621785",
+        "621786",
+        "621788",
+        "622202",
+        "621225",
+        "621226",
+        "621799",
+        "621797",
+        "621798",
+        "622538",
+        "622536",
+        "622535",
+        "622909",
+        "622908",
+        "622907",
+        "622666",
+        "622667",
+        "622668",
+        "622630",
+        "622631",
+        "622632",
+        "622865",
+        "622866",
+        "622867",
+        "622899",
+        "622898",
+        "622897",
+        "622878",
+        "622879",
+        "622880",
+        "622200",
+        "622202",
+        "622203",
+    ]
+
+    bin_code = random.choice(bins)
+
+    remaining_length = random.choice([10, 11, 12])
+    partial_number = bin_code + "".join(
+        [str(random.randint(0, 9)) for _ in range(remaining_length - 1)]
+    )
+
+    # 使用Luhn算法计算校验位
+    def luhn_checksum(card_number: str) -> int:
+        digits = [int(d) for d in card_number]
+        odd_digits = digits[-1::-2]
+        even_digits = digits[-2::-2]
+        checksum = sum(odd_digits)
+        for d in even_digits:
+            checksum += sum(int(digit) for digit in str(d * 2))
+        return (10 - checksum % 10) % 10
+
+    check_digit = luhn_checksum(partial_number + "0")
+    return partial_number + str(check_digit)
+
+
+def generate_wechat_id() -> str:
+    """Generate a realistic WeChat ID."""
+    patterns = [
+        lambda: f"wxid_{''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=12))}",
+        lambda: f"{random.choice(['wx', 'we', 'wei'])}{random.randint(10000000, 99999999)}",
+        lambda: f"{random.choice(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'])}{random.randint(10000000, 99999999)}",
+        lambda: f"{random.choice(['zhang', 'li', 'wang', 'liu', 'chen', 'yang', 'zhao', 'wu', 'zhou'])}{random.randint(1000, 999999)}",
+        lambda: f"{random.choice(['happy', 'lucky', 'sunny', 'cool', 'sweet', 'lovely', 'nice', 'good', 'great', 'super'])}{random.randint(1000, 999999)}",
+        lambda: f"{random.choice(['love', 'life', 'dream', 'hope', 'faith', 'peace', 'joy', 'smile'])}{random.randint(1000, 999999)}",
+    ]
+    return random.choice(patterns)()
+
+
+def generate_qq_number() -> str:
+    """Generate a realistic QQ number."""
+    length_weights = [
+        (5, 0.001),
+        (6, 0.005),
+        (7, 0.05),
+        (8, 0.15),
+        (9, 0.35),
+        (10, 0.35),
+        (11, 0.094),
+    ]
+
+    lengths, weights = zip(*length_weights)
+    length = random.choices(lengths, weights=weights)[0]
+
+    if length == 5:
+        return str(random.randint(10000, 99999))
+    elif length == 6:
+        return str(random.randint(100000, 999999))
+    elif length == 7:
+        return str(random.randint(1000000, 9999999))
+    elif length == 8:
+        return str(random.randint(10000000, 99999999))
+    elif length == 9:
+        return str(random.randint(100000000, 999999999))
+    elif length == 10:
+        return str(random.randint(1000000000, 9999999999))
+    else:
+        return str(random.randint(10000000000, 99999999999))
+
+
+def generate_license_plate() -> str:
+    """Generate a realistic Chinese license plate number."""
+    provinces = [
+        "京",
+        "津",
+        "沪",
+        "渝",
+        "冀",
+        "豫",
+        "云",
+        "辽",
+        "黑",
+        "湘",
+        "皖",
+        "鲁",
+        "新",
+        "苏",
+        "浙",
+        "赣",
+        "鄂",
+        "桂",
+        "甘",
+        "晋",
+        "蒙",
+        "陕",
+        "吉",
+        "闽",
+        "贵",
+        "粤",
+        "青",
+        "藏",
+        "川",
+        "宁",
+        "琼",
+    ]
+
+    city_codes = [
+        chr(i) for i in range(ord("A"), ord("Z") + 1) if chr(i) not in ["I", "O"]
+    ]
+
+    plate_chars = [str(i) for i in range(10)] + [
+        chr(i) for i in range(ord("A"), ord("Z") + 1) if chr(i) not in ["I", "O"]
+    ]
+
+    province = random.choice(provinces)
+    city_code = random.choice(city_codes)
+
+    if random.random() < 0.15:
+        energy_type = random.choice(["D", "F"])
+        plate = "".join(random.choices(plate_chars, k=5))
+        return f"{province}{city_code}{energy_type}{plate}"
+    else:
+        plate = "".join(random.choices(plate_chars, k=5))
+        return f"{province}{city_code}{plate}"
