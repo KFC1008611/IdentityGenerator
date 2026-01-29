@@ -14,6 +14,11 @@ class OutputFormat(str, Enum):
     CSV = "csv"
     TABLE = "table"
     RAW = "raw"
+    EXCEL = "excel"
+    SQL = "sql"
+    MARKDOWN = "markdown"
+    YAML = "yaml"
+    VCARD = "vcard"
 
 
 class IdentityField(str, Enum):
@@ -35,6 +40,19 @@ class IdentityField(str, Enum):
     JOB_TITLE = "job_title"
     USERNAME = "username"
     PASSWORD = "password"
+    # New Chinese-specific fields
+    ETHNICITY = "ethnicity"
+    EDUCATION = "education"
+    MAJOR = "major"
+    POLITICAL_STATUS = "political_status"
+    MARITAL_STATUS = "marital_status"
+    BLOOD_TYPE = "blood_type"
+    HEIGHT = "height"
+    WEIGHT = "weight"
+    BANK_CARD = "bank_card"
+    WECHAT_ID = "wechat_id"
+    QQ_NUMBER = "qq_number"
+    LICENSE_PLATE = "license_plate"
 
 
 class Identity(BaseModel):
@@ -56,6 +74,22 @@ class Identity(BaseModel):
     job_title: Optional[str] = Field(None, description="Job title")
     username: Optional[str] = Field(None, description="Username")
     password: Optional[str] = Field(None, description="Password")
+    ethnicity: Optional[str] = Field(None, description="Ethnicity (民族)")
+    education: Optional[str] = Field(None, description="Education level (学历)")
+    major: Optional[str] = Field(None, description="College major (专业)")
+    political_status: Optional[str] = Field(
+        None, description="Political status (政治面貌)"
+    )
+    marital_status: Optional[str] = Field(None, description="Marital status (婚姻状况)")
+    blood_type: Optional[str] = Field(None, description="Blood type (血型)")
+    height: Optional[int] = Field(None, description="Height in cm (身高)")
+    weight: Optional[int] = Field(None, description="Weight in kg (体重)")
+    bank_card: Optional[str] = Field(None, description="Bank card number (银行卡号)")
+    wechat_id: Optional[str] = Field(None, description="WeChat ID (微信号)")
+    qq_number: Optional[str] = Field(None, description="QQ number (QQ号)")
+    license_plate: Optional[str] = Field(
+        None, description="License plate number (车牌号)"
+    )
 
     def to_dict(self, include_fields: Optional[Set[str]] = None) -> dict:
         """Convert to dictionary with optional field filtering.

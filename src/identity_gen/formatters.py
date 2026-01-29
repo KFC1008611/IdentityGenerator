@@ -125,6 +125,152 @@ class IdentityFormatter:
             lines.append("")
         return "\n".join(lines)
 
+    @staticmethod
+    def format_sql(
+        identities: List[Identity],
+        include_fields: Optional[Set[str]] = None,
+        table_name: str = "identities",
+    ) -> str:
+        """Format identities as SQL INSERT statements.
+
+        Args:
+            identities: List of identities to format.
+            include_fields: Fields to include.
+            table_name: Name of the SQL table.
+
+        Returns:
+            SQL INSERT statements.
+        """
+        if not identities:
+            return ""
+
+        data = [identity.to_dict(include_fields) for identity in identities]
+        if not data:
+            return ""
+
+        lines = []
+        headers = list(data[0].keys())
+        columns = ", ".join(headers)
+
+        for item in data:
+            values = []
+            for h in headers:
+                v = item.get(h)
+                if v is None:
+                    values.append("NULL")
+                elif isinstance(v, str):
+                    escaped = v.replace("'", "''")
+                    values.append(f"'{escaped}'")
+                else:
+                    values.append(str(v))
+            values_str = ", ".join(values)
+            lines.append(f"INSERT INTO {table_name} ({columns}) VALUES ({values_str});")
+
+        return "\n".join(lines)
+
+    @staticmethod
+    def format_markdown(
+        identities: List[Identity],
+        include_fields: Optional[Set[str]] = None,
+    ) -> str:
+        """Format identities as a Markdown table.
+
+        Args:
+            identities: List of identities to format.
+            include_fields: Fields to include.
+
+        Returns:
+            Markdown table string.
+        """
+        if not identities:
+            return ""
+
+        data = [identity.to_dict(include_fields) for identity in identities]
+        if not data:
+            return ""
+
+        headers = list(data[0].keys())
+
+        lines = []
+        lines.append("| " + " | ".join(headers) + " |")
+        lines.append("| " + " | ".join(["---"] * len(headers)) + " |")
+
+        for item in data:
+            row = [str(item.get(h, "")) for h in headers]
+            lines.append("| " + " | ".join(row) + " |")
+
+        return "\n".join(lines)
+
+    @staticmethod
+    def format_yaml(
+        identities: List[Identity],
+        include_fields: Optional[Set[str]] = None,
+    ) -> str:
+        """Format identities as YAML.
+
+        Args:
+            identities: List of identities to format.
+            include_fields: Fields to include.
+
+        Returns:
+            YAML string.
+        """
+        lines = []
+        for i, identity in enumerate(identities, 1):
+            lines.append(f"- identity_{i}:")
+            data = identity.to_dict(include_fields)
+            for key, value in data.items():
+                if value is not None:
+                    if isinstance(value, str):
+                        escaped = value.replace('"', '\\"')
+                        lines.append(f'    {key}: "{escaped}"')
+                    else:
+                        lines.append(f"    {key}: {value}")
+        return "\n".join(lines)
+
+    @staticmethod
+    def format_vcard(
+        identities: List[Identity],
+        include_fields: Optional[Set[str]] = None,
+    ) -> str:
+        """Format identities as vCard 3.0 format.
+
+        Args:
+            identities: List of identities to format.
+            include_fields: Fields to include.
+
+        Returns:
+            vCard formatted string.
+        """
+        vcards = []
+
+        for identity in identities:
+            data = identity.to_dict(include_fields)
+            lines = ["BEGIN:VCARD", "VERSION:3.0"]
+
+            name_parts = []
+            if data.get("last_name"):
+                name_parts.append(data["last_name"])
+            if data.get("first_name"):
+                name_parts.append(data["first_name"])
+
+            if name_parts:
+                lines.append(f"N:{';'.join(name_parts)};;;")
+                lines.append(f"FN:{''.join(name_parts)}")
+
+            if data.get("email"):
+                lines.append(f"EMAIL:{data['email']}")
+            if data.get("phone"):
+                lines.append(f"TEL:{data['phone']}")
+            if data.get("address"):
+                addr = data["address"].replace(",", "\\,")
+                lines.append(f"ADR:;;{addr};;;;")
+
+            lines.append("END:VCARD")
+            vcards.append("\n".join(lines))
+
+        return "\n\n".join(vcards)
+
     @classmethod
     def format(
         cls,
@@ -147,6 +293,12 @@ class IdentityFormatter:
             OutputFormat.CSV: lambda: cls.format_csv(identities, include_fields),
             OutputFormat.TABLE: lambda: cls.format_table(identities, include_fields),
             OutputFormat.RAW: lambda: cls.format_raw(identities),
+            OutputFormat.SQL: lambda: cls.format_sql(identities, include_fields),
+            OutputFormat.MARKDOWN: lambda: cls.format_markdown(
+                identities, include_fields
+            ),
+            OutputFormat.YAML: lambda: cls.format_yaml(identities, include_fields),
+            OutputFormat.VCARD: lambda: cls.format_vcard(identities, include_fields),
         }
 
         formatter = formatters.get(output_format)
