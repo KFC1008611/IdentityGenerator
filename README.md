@@ -257,15 +257,16 @@ name,email,phone
 identity-gen/
 ├── src/
 │   └── identity_gen/
-│       ├── __init__.py       # 包初始化
-│       ├── cli.py            # CLI 入口
+│       ├── __init__.py       # 包初始化，导出主要类
+│       ├── cli.py            # CLI 入口，支持子命令
 │       ├── generator.py      # 身份生成逻辑
-│       ├── china_data.py     # 中文数据提供者
+│       ├── china_data.py     # 中文行政区划、姓名、公司数据
 │       ├── models.py         # Pydantic 数据模型
-│       └── formatters.py     # 输出格式化
+│       └── formatters.py     # 输出格式化（JSON/CSV/TABLE/RAW）
 ├── tests/                    # 测试套件
 ├── pyproject.toml            # 项目配置
 ├── requirements.txt          # 依赖
+├── AGENTS.md                 # 开发指南
 └── README.md                 # 本文档
 ```
 
