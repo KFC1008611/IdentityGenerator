@@ -51,5 +51,7 @@ htmlcov/
 *.txt
 !requirements.txt
 !pyproject.toml
+# Allow project data files
+!src/**/*.json
 output/
 identities_*
