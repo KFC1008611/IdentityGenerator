@@ -24,9 +24,11 @@ class OutputFormat(str, Enum):
 class IdentityField(str, Enum):
     """Available identity fields."""
 
+    # Personal information
     NAME = "name"
     FIRST_NAME = "first_name"
     LAST_NAME = "last_name"
+    GENDER = "gender"
     EMAIL = "email"
     PHONE = "phone"
     ADDRESS = "address"
@@ -40,7 +42,7 @@ class IdentityField(str, Enum):
     JOB_TITLE = "job_title"
     USERNAME = "username"
     PASSWORD = "password"
-    # New Chinese-specific fields
+    # Chinese-specific fields
     ETHNICITY = "ethnicity"
     EDUCATION = "education"
     MAJOR = "major"
@@ -53,14 +55,29 @@ class IdentityField(str, Enum):
     WECHAT_ID = "wechat_id"
     QQ_NUMBER = "qq_number"
     LICENSE_PLATE = "license_plate"
+    # New fields for enhanced identity
+    ZODIAC_SIGN = "zodiac_sign"  # 星座
+    CHINESE_ZODIAC = "chinese_zodiac"  # 生肖
+    IP_ADDRESS = "ip_address"  # IP地址
+    MAC_ADDRESS = "mac_address"  # MAC地址
+    SOCIAL_CREDIT_CODE = "social_credit_code"  # 统一社会信用代码
+    EMERGENCY_CONTACT = "emergency_contact"  # 紧急联系人
+    EMERGENCY_PHONE = "emergency_phone"  # 紧急联系电话
+    HOBBIES = "hobbies"  # 兴趣爱好
+    RELIGION = "religion"  # 宗教信仰
 
 
 class Identity(BaseModel):
     """Complete identity information model."""
 
+    # Basic personal information
     name: Optional[str] = Field(None, description="Full name")
-    first_name: Optional[str] = Field(None, description="First name")
-    last_name: Optional[str] = Field(None, description="Last name")
+    first_name: Optional[str] = Field(None, description="First name (given name)")
+    last_name: Optional[str] = Field(None, description="Last name (surname)")
+    birthdate: Optional[date] = Field(None, description="Date of birth")
+    gender: Optional[str] = Field(None, description="Gender (male/female)")
+
+    # Contact information
     email: Optional[str] = Field(None, description="Email address")
     phone: Optional[str] = Field(None, description="Phone number")
     address: Optional[str] = Field(None, description="Full address")
@@ -68,28 +85,54 @@ class Identity(BaseModel):
     state: Optional[str] = Field(None, description="State/Province")
     zipcode: Optional[str] = Field(None, description="ZIP/Postal code")
     country: Optional[str] = Field(None, description="Country")
-    ssn: Optional[str] = Field(None, description="Social Security Number/National ID")
-    birthdate: Optional[date] = Field(None, description="Date of birth")
+
+    # Identity documents
+    ssn: Optional[str] = Field(None, description="Chinese ID card number (18 digits)")
+
+    # Professional information
     company: Optional[str] = Field(None, description="Company name")
     job_title: Optional[str] = Field(None, description="Job title")
+    education: Optional[str] = Field(None, description="Education level")
+    major: Optional[str] = Field(None, description="College major")
+
+    # Account credentials
     username: Optional[str] = Field(None, description="Username")
     password: Optional[str] = Field(None, description="Password")
+    wechat_id: Optional[str] = Field(None, description="WeChat ID")
+    qq_number: Optional[str] = Field(None, description="QQ number")
+
+    # Social information
     ethnicity: Optional[str] = Field(None, description="Ethnicity (民族)")
-    education: Optional[str] = Field(None, description="Education level (学历)")
-    major: Optional[str] = Field(None, description="College major (专业)")
     political_status: Optional[str] = Field(
         None, description="Political status (政治面貌)"
     )
     marital_status: Optional[str] = Field(None, description="Marital status (婚姻状况)")
+    religion: Optional[str] = Field(None, description="Religion (宗教信仰)")
+
+    # Physical characteristics
     blood_type: Optional[str] = Field(None, description="Blood type (血型)")
     height: Optional[int] = Field(None, description="Height in cm (身高)")
     weight: Optional[int] = Field(None, description="Weight in kg (体重)")
+
+    # Financial information
     bank_card: Optional[str] = Field(None, description="Bank card number (银行卡号)")
-    wechat_id: Optional[str] = Field(None, description="WeChat ID (微信号)")
-    qq_number: Optional[str] = Field(None, description="QQ number (QQ号)")
-    license_plate: Optional[str] = Field(
-        None, description="License plate number (车牌号)"
+    license_plate: Optional[str] = Field(None, description="License plate (车牌号)")
+    social_credit_code: Optional[str] = Field(
+        None, description="Social credit code (统一社会信用代码)"
     )
+
+    # Digital identity
+    ip_address: Optional[str] = Field(None, description="IP address (IP地址)")
+    mac_address: Optional[str] = Field(None, description="MAC address (MAC地址)")
+
+    # Astrological/Birth characteristics
+    zodiac_sign: Optional[str] = Field(None, description="Zodiac sign (星座)")
+    chinese_zodiac: Optional[str] = Field(None, description="Chinese zodiac (生肖)")
+
+    # Additional information
+    emergency_contact: Optional[str] = Field(None, description="Emergency contact name")
+    emergency_phone: Optional[str] = Field(None, description="Emergency contact phone")
+    hobbies: Optional[str] = Field(None, description="Hobbies (兴趣爱好)")
 
     def to_dict(self, include_fields: Optional[Set[str]] = None) -> dict:
         """Convert to dictionary with optional field filtering.

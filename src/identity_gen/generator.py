@@ -1,14 +1,9 @@
-"""Chinese identity generation logic.
-
-This module provides functions and classes for generating realistic Chinese
-virtual identity information including names, ID cards, phone numbers, addresses,
-and other personal details with proper probability distributions.
-"""
+"""Enhanced Chinese identity generation logic with improved data quality and field correlations."""
 
 import logging
 import random
 from datetime import date
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 
 from faker import Faker
 
@@ -19,33 +14,13 @@ logger = logging.getLogger(__name__)
 
 
 def calculate_chinese_id_checksum(id_17: str) -> str:
-    """Calculate the last digit (checksum) of Chinese ID card using GB 11643-1999 standard.
-
-    The Chinese national ID card number uses a weighted sum algorithm where each
-    of the first 17 digits is multiplied by a corresponding weight factor. The
-    remainder of the sum divided by 11 is used to look up the check digit.
-
-    Args:
-        id_17: The first 17 digits of the ID card number.
-
-    Returns:
-        The check digit (0-9 or X).
-
-    Raises:
-        ValueError: If id_17 is not exactly 17 characters or contains non-digit characters.
-
-    Example:
-        >>> calculate_chinese_id_checksum("11010119900101101")
-        '5'
-    """
+    """Calculate the last digit (checksum) of Chinese ID card using GB 11643-1999 standard."""
     if len(id_17) != 17:
         raise ValueError(f"ID prefix must be exactly 17 digits, got {len(id_17)}")
     if not id_17.isdigit():
         raise ValueError("ID prefix must contain only digits")
 
-    # Weight factors for each position as defined in GB 11643-1999
     weights = [7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2]
-    # Check digit mapping based on remainder
     check_codes = "10X98765432"
 
     sum_value = sum(int(id_17[i]) * weights[i] for i in range(17))
@@ -55,37 +30,12 @@ def calculate_chinese_id_checksum(id_17: str) -> str:
 def generate_chinese_id_card(
     birthdate: date, area_code: str, gender: Optional[str] = None
 ) -> str:
-    """Generate a valid Chinese ID card number following GB 11643-1999 standard.
-
-    The ID card number consists of:
-    - 6-digit administrative division code (area_code)
-    - 8-digit birth date (YYYYMMDD)
-    - 3-digit sequence code (odd for male, even for female)
-    - 1-digit check code calculated using weighted sum algorithm
-
-    Args:
-        birthdate: Date of birth for the ID card.
-        area_code: 6-digit administrative division code.
-        gender: Optional gender specification ('male' or 'female').
-               If None, gender is randomly assigned.
-
-    Returns:
-        A valid 18-digit Chinese ID card number.
-
-    Raises:
-        ValueError: If area_code is not 6 digits.
-
-    Example:
-        >>> from datetime import date
-        >>> generate_chinese_id_card(date(1990, 1, 1), "110101", "male")
-        '11010119900101001X'
-    """
+    """Generate a valid Chinese ID card number following GB 11643-1999 standard."""
     if len(area_code) != 6 or not area_code.isdigit():
         raise ValueError("area_code must be exactly 6 digits")
 
     birth_str = birthdate.strftime("%Y%m%d")
 
-    # Sequence code: odd numbers (1,3,5...) for male, even (2,4,6...) for female
     if gender == "male":
         sequence = str(random.randrange(1, 999, 2)).zfill(3)
     elif gender == "female":
@@ -100,81 +50,55 @@ def generate_chinese_id_card(
 
 
 def generate_chinese_phone() -> str:
-    """Generate a realistic Chinese mobile phone number with carrier distribution.
-
-    Chinese mobile numbers are 11 digits:
-    - First digit is always 1
-    - Second digit indicates carrier type (3-9)
-    - Third digit further identifies carrier
-    - Last 8 digits are random
-
-    Carrier distribution (approximate market share):
-    - China Mobile: ~58% (prefixes: 134-139, 147, 150-152, 157-159, etc.)
-    - China Unicom: ~26% (prefixes: 130-132, 145, 155-156, 166, 175-176, etc.)
-    - China Telecom: ~15% (prefixes: 133, 149, 153, 173, 177, 180-181, 189, 199)
-    - Virtual operators: ~1% (prefixes: 170, 171)
-
-    Returns:
-        An 11-digit Chinese mobile phone number string.
-
-    Example:
-        >>> generate_chinese_phone()
-        '13812345678'
-    """
-    # Carrier prefixes with approximate market share distribution
-    # China Mobile: ~58% market share
+    """Generate a realistic Chinese mobile phone number with carrier distribution."""
     mobile_prefixes = [
         "134",
         "135",
         "136",
         "137",
         "138",
-        "139",  # Classic series
-        "147",  # Data cards
+        "139",
+        "147",
         "150",
         "151",
         "152",
         "157",
         "158",
-        "159",  # 3G era
-        "178",  # 4G era
+        "159",
+        "178",
         "182",
         "183",
         "184",
         "187",
-        "188",  # 4G era
-        "198",  # 5G era
+        "188",
+        "198",
     ]
-    # China Unicom: ~26% market share
     unicom_prefixes = [
         "130",
         "131",
-        "132",  # Classic series
-        "145",  # Data cards
+        "132",
+        "145",
         "155",
-        "156",  # 3G era
-        "166",  # 4G era
+        "156",
+        "166",
         "175",
-        "176",  # 4G era
+        "176",
         "185",
-        "186",  # 4G era
+        "186",
     ]
-    # China Telecom: ~15% market share
     telecom_prefixes = [
-        "133",  # Classic series
-        "149",  # Data cards
-        "153",  # 3G era
+        "133",
+        "149",
+        "153",
         "173",
-        "177",  # 4G era
+        "177",
         "180",
         "181",
-        "189",  # 4G era
-        "199",  # 5G era
+        "189",
+        "199",
     ]
-    # Virtual operators: ~1% market share
     virtual_prefixes = ["170", "171"]
 
-    # Weighted selection based on market share
     carrier_type = random.choices(
         ["mobile", "unicom", "telecom", "virtual"], weights=[58, 26, 15, 1], k=1
     )[0]
@@ -188,42 +112,12 @@ def generate_chinese_phone() -> str:
     else:
         prefix = random.choice(virtual_prefixes)
 
-    # Generate 8 random digits for the suffix
     suffix = "".join([str(random.randint(0, 9)) for _ in range(8)])
     return prefix + suffix
 
 
-def generate_chinese_name(
-    gender: Optional[str] = None,
-) -> Tuple[str, str, str, str]:
-    """Generate a realistic Chinese name with weighted surname distribution.
-
-    Uses real surname frequency data from China (2020 census):
-    - Top 5 surnames (王, 李, 张, 刘, 陈) account for ~30.8% of population
-    - Top 10 surnames account for ~42.5% of population
-    - Top 100 surnames account for ~85% of population
-
-    Given name patterns follow modern Chinese naming conventions:
-    - Single character names: ~30%
-    - Double character names: ~65%
-    - Triple character names: ~5%
-    - Male names tend toward strength/wisdom characters (伟, 强, 磊, etc.)
-    - Female names tend toward beauty/grace characters (芳, 娜, 丽, etc.)
-
-    Args:
-        gender: "male" or "female". If None, randomly chosen with equal probability.
-
-    Returns:
-        Tuple of (full_name, first_name, last_name, gender) where:
-        - full_name: "GivenName Surname" format (Western style for compatibility)
-        - first_name: Given name (名)
-        - last_name: Surname (姓)
-        - gender: "male" or "female"
-
-    Example:
-        >>> generate_chinese_name("male")
-        ('Wei Wang', 'Wei', 'Wang', 'male')
-    """
+def generate_chinese_name(gender: Optional[str] = None) -> Tuple[str, str, str, str]:
+    """Generate a realistic Chinese name with weighted surname distribution."""
     if gender is None:
         gender = random.choice(["male", "female"])
 
@@ -256,26 +150,33 @@ def generate_chinese_name(
     return full_name, given_name, surname, gender
 
 
-def generate_chinese_email(name: str) -> str:
-    """Generate a realistic Chinese email address."""
+def generate_chinese_email(
+    name: Optional[str] = None, phone: Optional[str] = None
+) -> str:
+    """Generate a realistic Chinese email address with improved correlation."""
     domains = [
-        "qq.com",
-        "163.com",
-        "126.com",
-        "sina.com",
-        "sohu.com",
-        "aliyun.com",
-        "139.com",
-        "189.cn",
-        "wo.cn",
-        "outlook.com",
-        "gmail.com",
-        "hotmail.com",
-        "foxmail.com",
-        "yeah.net",
+        ("qq.com", 35),
+        ("163.com", 20),
+        ("126.com", 10),
+        ("sina.com", 8),
+        ("sohu.com", 5),
+        ("aliyun.com", 5),
+        ("139.com", 4),
+        ("189.cn", 4),
+        ("wo.cn", 2),
+        ("outlook.com", 3),
+        ("gmail.com", 2),
+        ("hotmail.com", 1),
+        ("foxmail.com", 1),
     ]
 
-    # 使用拼音风格或随机英文用户名
+    domain_names, domain_weights = zip(*domains)
+    domain = random.choices(domain_names, weights=domain_weights)[0]
+
+    if phone and domain == "qq.com":
+        if random.random() < 0.6:
+            return f"{phone}@qq.com"
+
     pinyin_prefixes = [
         "zhang",
         "li",
@@ -299,7 +200,6 @@ def generate_chinese_email(name: str) -> str:
         "xie",
         "song",
         "tang",
-        "xu",
         "han",
         "feng",
         "deng",
@@ -307,20 +207,9 @@ def generate_chinese_email(name: str) -> str:
         "peng",
         "zeng",
         "xiao",
-        "dong",
-        "yuan",
-        "pan",
-        "yu",
-        "jiang",
-        "cai",
-        "jia",
-        "wei",
-        "luo",
-        "tang",
     ]
 
-    # 多种邮箱格式
-    formats = [
+    patterns = [
         lambda: f"{random.choice(pinyin_prefixes)}{random.randint(10, 9999)}",
         lambda: f"{random.choice(pinyin_prefixes)}_{random.randint(10, 999)}",
         lambda: f"{random.choice(pinyin_prefixes)}.{random.randint(100, 999)}",
@@ -329,20 +218,15 @@ def generate_chinese_email(name: str) -> str:
         lambda: f"a{random.randint(10000000, 99999999)}",
     ]
 
-    username = random.choice(formats)()
-    domain = random.choice(domains)
+    username = random.choice(patterns)()
     return f"{username}@{domain}"
 
 
 def generate_chinese_company() -> str:
     """Generate a realistic Chinese company name."""
-    # 公司字号 (2-4个字)
-    name_length = random.choice([2, 2, 3, 3, 4])  # 2-3字更常见
+    name_length = random.choice([2, 2, 3, 3, 4])
     company_name = "".join(random.choices(china_data.COMPANY_NAME_WORDS, k=name_length))
-
-    # 公司类型
     company_type = random.choice(china_data.COMPANY_TYPES)
-
     return f"{company_name}{company_type}"
 
 
@@ -351,9 +235,8 @@ def generate_chinese_job_title() -> str:
     return random.choice(china_data.JOB_TITLES)
 
 
-def generate_chinese_username(name: str) -> str:
+def generate_chinese_username(name: Optional[str] = None) -> str:
     """Generate a Chinese-style username."""
-    # 使用拼音前缀或随机英文
     pinyin_prefixes = [
         "zhang",
         "li",
@@ -397,21 +280,280 @@ def generate_chinese_username(name: str) -> str:
     return random.choice(formats)(prefix)
 
 
+def get_zodiac_sign(birthdate: date) -> str:
+    """Get Western zodiac sign from birthdate."""
+    month = birthdate.month
+    day = birthdate.day
+
+    zodiac_dates = [
+        ((3, 21), (4, 19), "白羊座"),
+        ((4, 20), (5, 20), "金牛座"),
+        ((5, 21), (6, 21), "双子座"),
+        ((6, 22), (7, 22), "巨蟹座"),
+        ((7, 23), (8, 22), "狮子座"),
+        ((8, 23), (9, 22), "处女座"),
+        ((9, 23), (10, 23), "天秤座"),
+        ((10, 24), (11, 22), "天蝎座"),
+        ((11, 23), (12, 21), "射手座"),
+        ((12, 22), (1, 19), "摩羯座"),
+        ((1, 20), (2, 18), "水瓶座"),
+        ((2, 19), (3, 20), "双鱼座"),
+    ]
+
+    for start, end, sign in zodiac_dates:
+        start_month, start_day = start
+        end_month, end_day = end
+
+        if start_month < end_month:
+            if (
+                (month == start_month and day >= start_day)
+                or (month == end_month and day <= end_day)
+                or (start_month < month < end_month)
+            ):
+                return sign
+        else:
+            if (
+                (month == start_month and day >= start_day)
+                or (month == end_month and day <= end_day)
+                or (month > start_month or month < end_month)
+            ):
+                return sign
+
+    return "摩羯座"
+
+
+def get_chinese_zodiac(birthdate: date) -> str:
+    """Get Chinese zodiac from birth year."""
+    animals = ["鼠", "牛", "虎", "兔", "龙", "蛇", "马", "羊", "猴", "鸡", "狗", "猪"]
+    year = birthdate.year
+    index = (year - 2020) % 12
+    return animals[index]
+
+
+def generate_ip_address() -> str:
+    """Generate a realistic Chinese IPv4 address."""
+    ip_types = [
+        ("10", 10),
+        ("172", 5),
+        ("192", 15),
+        ("116", 5),
+        ("117", 5),
+        ("118", 5),
+        ("119", 5),
+        ("120", 5),
+        ("121", 5),
+        ("122", 5),
+        ("123", 5),
+        ("124", 5),
+        ("125", 5),
+        ("126", 5),
+        ("202", 5),
+        ("203", 5),
+        ("210", 5),
+        ("211", 5),
+        ("218", 5),
+        ("219", 5),
+        ("220", 5),
+        ("221", 5),
+        ("222", 5),
+    ]
+
+    first_octets, weights = zip(*ip_types)
+    first = random.choices(first_octets, weights=weights)[0]
+
+    if first == "172":
+        second = random.randint(16, 31)
+    elif first == "192":
+        second = 168
+    else:
+        second = random.randint(0, 255)
+
+    third = random.randint(0, 255)
+    fourth = random.randint(1, 254)
+
+    return f"{first}.{second}.{third}.{fourth}"
+
+
+def generate_mac_address() -> str:
+    """Generate a random MAC address."""
+    oui_prefixes = [
+        "00:1A:2B",
+        "00:1C:C4",
+        "00:25:9E",
+        "00:0C:6E",
+        "64:69:4E",
+        "78:02:F8",
+        "AC:DE:48",
+        "00:08:22",
+        "00:15:EB",
+        "00:19:C6",
+        "00:22:93",
+        "00:1F:3A",
+        "00:24:11",
+        "00:26:C6",
+        "00:1F:16",
+        "00:E0:4C",
+        "00:1A:1E",
+        "00:21:CC",
+        "00:24:D6",
+    ]
+
+    oui = random.choice(oui_prefixes)
+    remaining = ":".join([f"{random.randint(0, 255):02X}" for _ in range(3)])
+    return f"{oui}:{remaining}"
+
+
+def generate_social_credit_code() -> str:
+    """Generate a valid Chinese Unified Social Credit Code."""
+    authority_codes = ["1", "5", "9"]
+    org_types = ["1", "2", "3", "9"]
+
+    authority = random.choice(authority_codes)
+    org_type = random.choice(org_types)
+
+    province_code = random.choice(list(china_data.PROVINCES.keys()))
+    if province_code in china_data.CITIES:
+        city_code = random.choice(list(china_data.CITIES[province_code].keys()))
+    else:
+        city_code = "01"
+    # Add district code (2 digits) to make 6-digit area code
+    district_code = str(random.randint(1, 99)).zfill(2)
+    area_code = f"{province_code}{city_code}{district_code}"
+
+    org_code = "".join([str(random.randint(0, 9)) for _ in range(9)])
+    code_17 = authority + org_type + area_code + org_code
+
+    chars = "0123456789ABCDEFGHJKLMNPQRTUWXY"
+    weights = [1, 3, 9, 27, 19, 26, 16, 17, 20, 29, 25, 13, 8, 24, 10, 30, 28]
+
+    total = 0
+    for i, char in enumerate(code_17):
+        if char.isdigit():
+            idx = int(char)
+        else:
+            idx = chars.index(char.upper()) if char.upper() in chars else 0
+        total += idx * weights[i]
+
+    check_digit = chars[(31 - (total % 31)) % 31]
+
+    return code_17 + check_digit
+
+
+def generate_emergency_contact(main_name: str) -> Tuple[str, str]:
+    """Generate an emergency contact with relationship."""
+    relationships = [
+        ("父亲", 25),
+        ("母亲", 25),
+        ("配偶", 30),
+        ("兄弟姐妹", 10),
+        ("子女", 5),
+        ("朋友", 5),
+    ]
+
+    rel_names, rel_weights = zip(*relationships)
+    relationship = random.choices(rel_names, weights=rel_weights)[0]
+
+    _, given_name, surname, _ = generate_chinese_name()
+
+    if relationship == "父亲":
+        main_surname = (
+            main_name.split()[1]
+            if " " in main_name
+            else random.choice(china_data.SURNAMES[:20])
+        )
+        contact_name = f"{main_surname}{random.choice(china_data.MALE_NAMES[:50])}"
+    elif relationship == "母亲":
+        contact_name = f"{surname}{random.choice(china_data.FEMALE_NAMES[:50])}"
+    else:
+        contact_name = f"{given_name} {surname}"
+
+    return contact_name, relationship
+
+
+def generate_hobbies() -> str:
+    """Generate realistic hobbies."""
+    hobby_categories = {
+        "sports": [
+            "跑步",
+            "游泳",
+            "篮球",
+            "足球",
+            "羽毛球",
+            "乒乓球",
+            "网球",
+            "健身",
+            "瑜伽",
+            "骑行",
+            "登山",
+            "滑雪",
+        ],
+        "arts": [
+            "绘画",
+            "书法",
+            "摄影",
+            "音乐",
+            "舞蹈",
+            "唱歌",
+            "乐器",
+            "写作",
+            "阅读",
+            "看电影",
+            "看剧",
+            "追综艺",
+        ],
+        "entertainment": [
+            "打游戏",
+            "追剧",
+            "刷短视频",
+            "看直播",
+            "K歌",
+            "桌游",
+            "密室逃脱",
+            "剧本杀",
+        ],
+        "outdoor": ["旅游", "露营", "徒步", "钓鱼", "摄影采风", "自驾游"],
+        "food": ["烹饪", "烘焙", "品茶", "咖啡", "探店", "美食"],
+        "learning": ["学习外语", "编程", "阅读", "听播客", "看纪录片", "在线课程"],
+        "social": ["聚会", "交友", "社团活动", "志愿服务", "公益活动"],
+        "collection": ["集邮", "收藏", "手办", "模型", "乐高", "盲盒"],
+        "crafts": ["手工", "DIY", "编织", "刺绣", "木工", "陶艺"],
+    }
+
+    num_categories = random.choices([1, 2, 3, 4], weights=[10, 40, 35, 15])[0]
+    selected_categories = random.sample(list(hobby_categories.keys()), num_categories)
+
+    hobbies = []
+    for category in selected_categories:
+        num_hobbies = random.choices([1, 2], weights=[70, 30])[0]
+        hobbies.extend(random.sample(hobby_categories[category], num_hobbies))
+
+    hobbies = hobbies[:5]
+    return "、".join(hobbies)
+
+
+def get_religion() -> str:
+    """Get a random religion based on Chinese population distribution."""
+    religions = [
+        ("无宗教信仰", 88.0),
+        ("佛教", 6.0),
+        ("道教", 1.5),
+        ("基督教", 2.5),
+        ("天主教", 0.5),
+        ("伊斯兰教", 1.5),
+    ]
+
+    names, weights = zip(*religions)
+    return random.choices(names, weights=weights)[0]
+
+
 class IdentityGenerator:
     """Generator for Chinese virtual identity information."""
 
     def __init__(self, config: IdentityConfig):
-        """Initialize generator with configuration.
-
-        Args:
-            config: Configuration for identity generation.
-        """
+        """Initialize generator with configuration."""
         self.config = config
-
-        # 强制使用中文locale
         self.faker = Faker("zh_CN")
 
-        # Set instance-level seed for reproducibility
         if config.seed is not None:
             self.faker.seed_instance(config.seed)
             random.seed(config.seed)
@@ -437,25 +579,58 @@ class IdentityGenerator:
         """Generate a realistic Chinese zipcode (6 digits)."""
         return str(random.randint(100000, 999999))
 
-    def _get_area_code_for_address(self, city: str, district: str = "") -> str:
-        """Get area code for ID card based on city."""
-        return china_data.get_area_code_by_address(city, district)
-
     def generate(self) -> Identity:
-        """Generate a single Chinese identity with consistent gender across name and ID."""
+        """Generate a single Chinese identity with consistent correlations."""
         fields = self.config.get_effective_fields()
-        identity_data = {}
+        identity_data: Dict[str, Any] = {}
+
         gender = random.choice(["male", "female"])
         address_bundle = {}
         birthdate = None
+        age = 30
+        phone = None
+        name_info = None
 
         if any(f in fields for f in ["address", "city", "state", "zipcode", "ssn"]):
             address_bundle = self._generate_address_bundle()
 
-        if "birthdate" in fields or "ssn" in fields:
+        if any(
+            f in fields
+            for f in [
+                "birthdate",
+                "ssn",
+                "age",
+                "zodiac_sign",
+                "chinese_zodiac",
+                "education",
+                "political_status",
+                "marital_status",
+            ]
+        ):
             birthdate = self.faker.date_of_birth(minimum_age=18, maximum_age=70)
+            age = (
+                date.today().year
+                - birthdate.year
+                - (
+                    (date.today().month, date.today().day)
+                    < (birthdate.month, birthdate.day)
+                )
+            )
             if "birthdate" in fields:
                 identity_data["birthdate"] = birthdate
+
+        if any(f in fields for f in ["name", "first_name", "last_name"]):
+            full_name, given_name, surname, _ = generate_chinese_name(gender)
+            name_info = {"full": full_name, "given": given_name, "surname": surname}
+            if "name" in fields:
+                identity_data["name"] = full_name
+            if "first_name" in fields:
+                identity_data["first_name"] = given_name
+            if "last_name" in fields:
+                identity_data["last_name"] = surname
+
+        if "gender" in fields:
+            identity_data["gender"] = gender
 
         if "ssn" in fields:
             if not birthdate:
@@ -464,15 +639,6 @@ class IdentityGenerator:
             identity_data["ssn"] = generate_chinese_id_card(
                 birthdate, area_code, gender
             )
-
-        if "name" in fields or "first_name" in fields or "last_name" in fields:
-            full_name, given_name, surname, _ = generate_chinese_name(gender)
-            if "name" in fields:
-                identity_data["name"] = full_name
-            if "first_name" in fields:
-                identity_data["first_name"] = given_name
-            if "last_name" in fields:
-                identity_data["last_name"] = surname
 
         if address_bundle:
             if "address" in fields:
@@ -487,12 +653,14 @@ class IdentityGenerator:
         if "country" in fields:
             identity_data["country"] = "中国"
 
-        if "email" in fields:
-            name_for_email = identity_data.get("name", "user")
-            identity_data["email"] = generate_chinese_email(name_for_email)
-
         if "phone" in fields:
-            identity_data["phone"] = generate_chinese_phone()
+            phone = generate_chinese_phone()
+            identity_data["phone"] = phone
+
+        if "email" in fields:
+            identity_data["email"] = generate_chinese_email(
+                name_info["full"] if name_info else None, phone
+            )
 
         if "company" in fields:
             identity_data["company"] = generate_chinese_company()
@@ -501,8 +669,9 @@ class IdentityGenerator:
             identity_data["job_title"] = generate_chinese_job_title()
 
         if "username" in fields:
-            name_for_user = identity_data.get("name", "user")
-            identity_data["username"] = generate_chinese_username(name_for_user)
+            identity_data["username"] = generate_chinese_username(
+                name_info["full"] if name_info else None
+            )
 
         if "password" in fields:
             identity_data["password"] = self.faker.password(
@@ -515,19 +684,6 @@ class IdentityGenerator:
 
         if "ethnicity" in fields:
             identity_data["ethnicity"] = china_data.get_random_ethnicity()
-
-        age = 30
-        if birthdate:
-            from datetime import date
-
-            age = (
-                date.today().year
-                - birthdate.year
-                - (
-                    (date.today().month, date.today().day)
-                    < (birthdate.month, birthdate.day)
-                )
-            )
 
         if "education" in fields or "major" in fields:
             education_level, major = china_data.get_random_education(age)
@@ -566,17 +722,44 @@ class IdentityGenerator:
         if "license_plate" in fields:
             identity_data["license_plate"] = china_data.generate_license_plate()
 
+        # New fields
+        if "zodiac_sign" in fields and birthdate:
+            identity_data["zodiac_sign"] = get_zodiac_sign(birthdate)
+
+        if "chinese_zodiac" in fields and birthdate:
+            identity_data["chinese_zodiac"] = get_chinese_zodiac(birthdate)
+
+        if "ip_address" in fields:
+            identity_data["ip_address"] = generate_ip_address()
+
+        if "mac_address" in fields:
+            identity_data["mac_address"] = generate_mac_address()
+
+        if "social_credit_code" in fields:
+            identity_data["social_credit_code"] = generate_social_credit_code()
+
+        if "emergency_contact" in fields or "emergency_phone" in fields:
+            if name_info:
+                contact_name, relationship = generate_emergency_contact(
+                    name_info["full"]
+                )
+                if "emergency_contact" in fields:
+                    identity_data["emergency_contact"] = (
+                        f"{contact_name} ({relationship})"
+                    )
+                if "emergency_phone" in fields:
+                    identity_data["emergency_phone"] = generate_chinese_phone()
+
+        if "hobbies" in fields:
+            identity_data["hobbies"] = generate_hobbies()
+
+        if "religion" in fields:
+            identity_data["religion"] = get_religion()
+
         return Identity(**identity_data)
 
     def generate_batch(self, count: Optional[int] = None) -> List[Identity]:
-        """Generate multiple identities.
-
-        Args:
-            count: Number to generate. Uses config.count if None.
-
-        Returns:
-            List of generated identities.
-        """
+        """Generate multiple identities."""
         count = count or self.config.count
         logger.info(f"Generating {count} Chinese identities")
 
@@ -589,9 +772,5 @@ class IdentityGenerator:
         return identities
 
     def get_supported_locales(self) -> List[str]:
-        """Get list of supported locales.
-
-        Returns:
-            List of locale codes (only zh_CN for China-only version).
-        """
+        """Get list of supported locales."""
         return ["zh_CN"]
