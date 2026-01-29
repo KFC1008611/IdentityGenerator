@@ -1,6 +1,10 @@
-"""Chinese Identity Generator CLI."""
+"""Chinese Identity Generator CLI.
 
-__version__ = "0.2.0"
+A Python CLI tool for generating realistic Chinese virtual identity information
+including names, addresses, ID cards, phone numbers, and other personal data.
+"""
+
+__version__ = "0.3.1"
 __author__ = "Identity Gen"
 __email__ = "identity@example.com"
 

@@ -53,6 +53,13 @@ def detect_format_from_extension(filename: str) -> Optional[OutputFormat]:
         "csv": OutputFormat.CSV,
         "txt": OutputFormat.TABLE,
         "text": OutputFormat.TABLE,
+        "sql": OutputFormat.SQL,
+        "md": OutputFormat.MARKDOWN,
+        "markdown": OutputFormat.MARKDOWN,
+        "yaml": OutputFormat.YAML,
+        "yml": OutputFormat.YAML,
+        "vcf": OutputFormat.VCARD,
+        "vcard": OutputFormat.VCARD,
     }
 
     return format_map.get(ext)
@@ -98,7 +105,10 @@ def generate_default_filename(output_format: OutputFormat = OutputFormat.CSV) ->
     "--format",
     "-f",
     "output_format",
-    type=click.Choice(["json", "csv", "table", "raw"], case_sensitive=False),
+    type=click.Choice(
+        ["json", "csv", "table", "raw", "sql", "markdown", "yaml", "vcard"],
+        case_sensitive=False,
+    ),
     default=None,
     help="Output format (default: auto-detect from file extension, or csv if not specified)",
     show_default=False,
@@ -260,10 +270,22 @@ def fields() -> None:
     console.print("\n[bold cyan]Available Identity Fields:[/bold cyan]\n")
 
     field_groups = {
-        "Personal": ["name", "first_name", "last_name", "birthdate", "ssn"],
+        "Personal": [
+            "name",
+            "first_name",
+            "last_name",
+            "birthdate",
+            "ssn",
+            "ethnicity",
+            "blood_type",
+            "height",
+            "weight",
+        ],
         "Contact": ["email", "phone", "address", "city", "state", "zipcode", "country"],
-        "Professional": ["company", "job_title"],
-        "Account": ["username", "password"],
+        "Professional": ["company", "job_title", "education", "major"],
+        "Account": ["username", "password", "wechat_id", "qq_number"],
+        "Social": ["political_status", "marital_status"],
+        "Finance": ["bank_card", "license_plate"],
     }
 
     for group, fields_list in field_groups.items():
