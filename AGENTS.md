@@ -208,23 +208,24 @@ identity-gen locales      # List supported locales (zh_CN only)
 identity-gen preview      # Generate and display a sample identity
 ```
 
-## Available Identity Fields (28 total)
+## Available Identity Fields (37 total)
 
-### Personal (9)
+### Personal (10)
 - `name` - Full name (GivenName Surname format)
 - `first_name` - Given name (名)
 - `last_name` - Surname (姓)
+- `gender` - Gender (male/female)
 - `birthdate` - Date of birth
-- `ssn` - Chinese ID card number (18 digits with checksum)
+- `ssn` - Chinese ID card number (18 digits with GB 11643-1999 checksum)
 - `ethnicity` - Ethnicity (56 ethnic groups with population ratios)
 - `blood_type` - Blood type (A/B/AB/O + RH negative/positive)
 - `height` - Height in cm (gender-based normal distribution)
 - `weight` - Weight in kg (BMI-based calculation)
 
 ### Contact (7)
-- `email` - Email address (China-specific domains)
-- `phone` - Mobile phone number
-- `address` - Full street address
+- `email` - Email address (market-share weighted domains, QQ-mail linked to phone)
+- `phone` - Mobile phone number (carrier market-share distribution)
+- `address` - Full street address (province-city-district-street hierarchy)
 - `city` - City name
 - `state` - Province name
 - `zipcode` - Postal code (6 digits)
@@ -233,7 +234,7 @@ identity-gen preview      # Generate and display a sample identity
 ### Professional (4)
 - `company` - Company name
 - `job_title` - Job title
-- `education` - Education level (9 levels from primary to PhD)
+- `education` - Education level (9 levels from primary to PhD with age constraints)
 - `major` - College major (80+ majors for higher education)
 
 ### Account (4)
@@ -242,13 +243,28 @@ identity-gen preview      # Generate and display a sample identity
 - `wechat_id` - WeChat ID (realistic patterns)
 - `qq_number` - QQ number (length-distributed)
 
-### Social (2)
+### Social (3)
 - `political_status` - Political status (13 statuses with age constraints)
 - `marital_status` - Marital status (4 statuses with age-dependent probabilities)
+- `religion` - Religion (population-weighted: 88% none, 6% Buddhist, etc.)
 
-### Finance (2)
+### Finance (3)
 - `bank_card` - Bank card number (UnionPay with Luhn checksum)
 - `license_plate` - License plate (standard and new energy vehicles)
+- `social_credit_code` - Unified Social Credit Code (18 chars, GB 32100-2015)
+
+### Digital Identity (2)
+- `ip_address` - IPv4 address (Chinese ISP ranges)
+- `mac_address` - MAC address (Chinese vendor OUI prefixes)
+
+### Birth Characteristics (2)
+- `zodiac_sign` - Western zodiac sign (calculated from birthdate)
+- `chinese_zodiac` - Chinese zodiac animal (calculated from birth year)
+
+### Emergency & Other (3)
+- `emergency_contact` - Emergency contact name with relationship
+- `emergency_phone` - Emergency contact phone number
+- `hobbies` - Hobbies (1-5 items from 9 categories)
 
 ## Output Formats
 
@@ -270,27 +286,40 @@ identity-gen preview      # Generate and display a sample identity
 - ID Cards: GB 11643-1999 standard with valid checksum calculation
 
 ## Version
-Current version: 0.3.1
+Current version: 0.4.0
 
-## Recent Improvements (v0.3.1)
-1. **数据真实性优化**
-   - 姓氏生成：使用2020年中国人口普查的真实频率数据
-     - 前5大姓（王、李、张、刘、陈）占比约30.8%
-     - 前100大姓占比约85%
-     - 添加 `get_weighted_surname()` 函数实现加权随机选择
-   - 手机号生成：按运营商市场份额分布
-     - 中国移动：~58%（ prefixes: 134-139, 147, 150-152, etc.）
-     - 中国联通：~26%（ prefixes: 130-132, 145, 155-156, etc.）
-     - 中国电信：~15%（ prefixes: 133, 149, 153, 173, etc.）
-     - 虚拟运营商：~1%
+## Recent Improvements (v0.4.0)
 
-2. **代码质量改进**
-   - 为所有公共函数添加完整的 Google Style 文档字符串
-   - 添加详细的参数说明、返回值说明和示例
-   - 补充类型提示，提高代码可维护性
-   - 添加关键算法的注释说明（如身份证号码校验算法）
+### 1. 新增数据字段（9个）
+- **星座** (`zodiac_sign`) - 根据出生日期计算西方星座
+- **生肖** (`chinese_zodiac`) - 根据出生年份计算中国生肖
+- **IP地址** (`ip_address`) - 生成符合中国运营商分布的IPv4地址
+- **MAC地址** (`mac_address`) - 使用华为、小米、中兴等中国厂商OUI前缀
+- **统一社会信用代码** (`social_credit_code`) - 符合GB 32100-2015标准
+- **紧急联系人** (`emergency_contact`) - 生成带关系的联系人姓名
+- **紧急联系电话** (`emergency_phone`) - 独立的紧急联系电话
+- **兴趣爱好** (`hobbies`) - 从9个分类中随机选择1-5个爱好
+- **宗教信仰** (`religion`) - 按中国人口实际比例分布
 
-3. **文档更新**
-   - 同步版本号到 0.3.1
-   - 更新 README.md 版本历史
-   - 添加改进记录到 AGENTS.md
+### 2. 数据关联性优化
+- **邮箱与手机号关联**：QQ邮箱有60%概率使用手机号作为用户名
+- **紧急联系人与姓名关联**：父亲使用相同姓氏，母亲使用不同姓氏
+- **出生日期与星座生肖关联**：星座和生肖根据出生日期自动计算
+- **年龄与教育/政治面貌关联**：确保生成的教育水平和政治面貌符合年龄限制
+
+### 3. 数据真实性提升
+- **邮箱域名分布**：按市场份额加权（QQ 35%、163 20%、126 10%等）
+- **宗教信仰分布**：无宗教信仰88%、佛教6%、基督教2.5%等
+- **MAC地址真实性**：使用真实的中国厂商OUI前缀（华为、小米、中兴等）
+- **IP地址分布**：包含中国电信/联通常用IP段
+
+### 4. 代码质量改进
+- 添加完整的类型提示（Type Hints）
+- 优化函数文档字符串
+- 改进错误处理
+- 重构生成逻辑，提高可维护性
+
+### 5. 文档更新
+- 同步版本号到 0.4.0
+- 更新所有字段文档
+- 添加新功能说明
