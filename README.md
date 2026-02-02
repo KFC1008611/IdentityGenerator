@@ -10,6 +10,7 @@
 ## 功能特性
 
 - **中文身份生成**: 专门生成逼真的中文身份信息（姓名、地址、身份证号等）
+- **身份证图片生成**: 生成逼真的身份证图片，包含自动生成的虚拟人像
 - **多种输出格式**: JSON、CSV、表格、纯文本、SQL、Markdown、YAML、vCard
 - **批量生成**: 单次可生成 1-10,000 个身份
 - **字段定制**: 选择包含或排除特定字段
@@ -46,24 +47,30 @@ pip install -e .
 - pydantic >= 2.0.0
 - tabulate >= 0.9.0
 - rich >= 13.0.0
+- Pillow >= 9.0.0（身份证图片生成）
+- numpy >= 1.20.0（身份证图片生成）
 
 ## 使用方法
 
 ### 基本用法
 
 ```bash
-# 生成一个默认身份（自动保存为 CSV）
+# 生成一个默认身份（自动保存为 CSV 和身份证图片）
 identity-gen
 # 输出: identities_20260128_154644.csv
+# 身份证图片: idcards/identities_20260128_154644_0000.png
 
-# 生成 5 个身份
+# 生成 5 个身份（同时生成 5 张身份证图片）
 identity-gen --count 5
+
+# 只生成文本数据，不生成身份证图片
+identity-gen --count 5 --no-idcard
 
 # 输出为 JSON（通过后缀名或 --format）
 identity-gen --output data.json --count 10
 identity-gen --format json --count 10
 
-# 输出到终端（用于管道或调试）
+# 输出到终端（用于管道或调试，不生成图片）
 identity-gen --count 5 --stdout
 
 # 指定输出文件名（自动检测格式）
@@ -94,6 +101,9 @@ identity-gen [OPTIONS]
   -e, --exclude TEXT      排除的字段 (可多次使用)
   -s, --seed INTEGER      随机种子（用于可复现结果）
   -v, --verbose           显示详细日志
+  --idcard / --no-idcard  是否同时生成身份证图片 (默认: 启用)
+  --idcard-dir TEXT       身份证图片输出目录 (默认: idcards)
+  --idcard-no-avatar      生成不带头像的身份证图片
   --help                  显示帮助信息
 ```
 
@@ -108,6 +118,9 @@ identity-gen locales
 
 # 预览示例身份
 identity-gen preview
+
+# 生成身份证图片
+identity-gen generate-idcard --count 5
 ```
 
 ### 输出行为
@@ -316,6 +329,128 @@ TEL:13800138000
 END:VCARD
 ```
 
+## 身份证图片生成
+
+工具现在**默认**会在生成文本身份信息的同时，自动生成对应的身份证图片。
+
+### 默认行为
+
+当你运行主命令时，会同时生成：
+1. **文本数据文件**（CSV/JSON等格式）
+2. **身份证图片**（PNG格式，保存到 `idcards/` 目录）
+
+```bash
+# 生成身份数据 + 身份证图片（默认行为）
+identity-gen --count 5
+# 输出：
+# - identities_20260128_154644.csv
+# - idcards/identities_20260128_154644_0000.png
+# - idcards/identities_20260128_154644_0001.png
+# - ...
+```
+
+### 控制身份证图片生成
+
+```bash
+# 禁用身份证图片生成
+identity-gen --count 5 --no-idcard
+
+# 指定身份证图片输出目录
+identity-gen --count 5 --idcard-dir ./my_idcards
+
+# 生成不带头像的身份证图片
+identity-gen --count 5 --idcard-no-avatar
+
+# 组合使用
+identity-gen --count 10 --idcard-dir ./photos --idcard-no-avatar
+```
+
+### 独立的身份证图片生成命令
+
+如果你只想生成身份证图片而不需要文本数据：
+
+```bash
+# 只生成身份证图片
+identity-gen generate-idcard --count 5
+
+# 指定输出目录
+identity-gen generate-idcard --count 10 --output-dir ./my_idcards
+
+# 生成不带头像的身份证图片
+identity-gen generate-idcard --count 3 --no-avatar
+
+# 使用随机种子确保可复现
+identity-gen generate-idcard --count 5 --seed 42
+
+# 自定义文件名格式
+identity-gen generate-idcard --count 3 --filename-pattern "{ssn}.png"
+```
+
+### 命令行选项（主命令）
+
+```bash
+identity-gen [OPTIONS]
+
+身份证图片相关选项:
+  --idcard / --no-idcard      是否同时生成身份证图片 (默认: 启用)
+  --idcard-dir TEXT           身份证图片输出目录 (默认: idcards)
+  --idcard-no-avatar          生成不带头像的身份证图片
+```
+
+### 命令行选项（独立命令）
+
+```bash
+identity-gen generate-idcard [OPTIONS]
+
+选项:
+  -n, --count INTEGER          生成数量 [默认: 1]
+  -o, --output-dir TEXT        输出目录 [默认: idcards]
+  --include-avatar             包含头像（默认启用）
+  --no-avatar                  不包含头像
+  -s, --seed INTEGER           随机种子
+  -f, --filename-pattern TEXT  文件名模式 [默认: {name}_idcard.png]
+                               可用占位符: {name}, {ssn}, {index}
+  --help                       显示帮助信息
+```
+
+### 身份证图片说明
+
+生成的身份证图片使用**真实身份证模板**，包括：
+- **真实模板背景**：使用标准身份证底板图片
+- **真实字体**：黑体、方正黑体、OCR-B等标准字体
+- **标准布局**：严格按照身份证规范排布文字和头像位置
+- **自动头像**：使用 Pillow 生成的虚拟人像（可禁用）
+- **完整信息**：姓名、性别、民族、出生日期、住址、身份证号
+
+头像生成特点：
+- 支持男性和女性特征
+- 包含肤色、发色、服装颜色的随机组合
+- 添加噪点纹理增加真实感
+- 完全离线生成，不依赖外部头像图片
+
+### API 使用
+
+```python
+from identity_gen import IdentityGenerator, IdentityConfig
+from identity_gen import IDCardImageGenerator, generate_idcard_image
+
+# 创建配置并生成身份
+config = IdentityConfig(locale="zh_CN", count=1)
+generator = IdentityGenerator(config)
+identity = generator.generate()
+
+# 生成单张身份证图片
+idcard_generator = IDCardImageGenerator()
+img = idcard_generator.generate(
+    identity=identity,
+    output_path="idcard.png",
+    include_avatar=True
+)
+
+# 或使用便捷函数
+img = generate_idcard_image(identity, output_path="idcard.png")
+```
+
 ## 开发
 
 ### 项目结构
@@ -324,26 +459,33 @@ END:VCARD
 identity-gen/
 ├── src/
 │   └── identity_gen/
-│       ├── __init__.py       # 包初始化，导出主要类
-│       ├── cli.py            # CLI 入口，支持子命令
-│       ├── generator.py      # 身份生成逻辑
-│       ├── china_data.py     # 中文行政区划、姓名、公司数据
-│       ├── models.py         # Pydantic 数据模型
-│       ├── formatters.py     # 输出格式化（JSON/CSV/TABLE/RAW/SQL/Markdown/YAML/vCard）
-│       └── data/             # 数据文件
-│           ├── names.json    # 姓名数据（300+姓氏）
-│           ├── jobs.json     # 职位数据（390+职位）
-│           ├── companies.json # 公司数据
-│           ├── ethnicities.json # 56个民族数据
-│           ├── education.json # 学历和专业数据
-│           ├── political.json # 政治面貌数据
-│           ├── marital.json  # 婚姻状况数据
-│           └── medical.json  # 血型数据
-├── tests/                    # 测试套件
-├── pyproject.toml            # 项目配置
-├── requirements.txt          # 依赖
-├── AGENTS.md                 # 开发指南
-└── README.md                 # 本文档
+│       ├── __init__.py              # 包初始化，导出主要类
+│       ├── cli.py                   # CLI 入口，支持子命令
+│       ├── generator.py             # 身份生成逻辑
+│       ├── idcard_image_generator.py # 身份证图片生成
+│       ├── china_data.py            # 中文行政区划、姓名、公司数据
+│       ├── models.py                # Pydantic 数据模型
+│       ├── formatters.py            # 输出格式化（JSON/CSV/TABLE/RAW/SQL/Markdown/YAML/vCard）
+│       └── data/                    # 数据文件
+│           ├── assets/              # 身份证图片资源
+│           │   ├── empty.png        # 身份证模板背景
+│           │   ├── hei.ttf          # 黑体字体
+│           │   ├── fzhei.ttf        # 方正黑体字体
+│           │   ├── ocrb10bt.ttf     # OCR-B字体（身份证号）
+│           │   └── avatar/          # 头像资源目录
+│           ├── names.json           # 姓名数据（300+姓氏）
+│           ├── jobs.json            # 职位数据（390+职位）
+│           ├── companies.json       # 公司数据
+│           ├── ethnicities.json     # 56个民族数据
+│           ├── education.json       # 学历和专业数据
+│           ├── political.json       # 政治面貌数据
+│           ├── marital.json         # 婚姻状况数据
+│           └── medical.json         # 血型数据
+├── tests/                           # 测试套件
+├── pyproject.toml                   # 项目配置
+├── requirements.txt                 # 依赖
+├── AGENTS.md                        # 开发指南
+└── README.md                        # 本文档
 ```
 
 ### 运行测试
@@ -405,7 +547,14 @@ for identity in identities:
 
 ## 版本历史
 
-- **v0.4.0** - 当前版本，全面升级
+- **v0.5.0** - 当前版本，新增身份证图片生成功能
+  - 新增身份证图片生成：使用 `identity-gen generate-idcard` 命令生成逼真的身份证图片
+  - 自动生成虚拟人像：使用 Pillow 绘制，支持男/女性别特征，不依赖外部图片资源
+  - 新增 `IDCardImageGenerator` 类和 `generate_idcard_image()` 便捷函数
+  - 支持批量生成身份证图片，可自定义文件名格式
+  - 新增依赖：Pillow >= 9.0.0, numpy >= 1.20.0
+
+- **v0.4.0** - 全面升级
   - 新增9个数据字段：星座、生肖、IP地址、MAC地址、统一社会信用代码、紧急联系人、紧急联系电话、兴趣爱好、宗教信仰
   - 优化数据关联性：手机号与QQ邮箱关联、姓名与紧急联系人关系关联、出生日期与星座生肖关联
   - 改进数据真实性：邮箱域名按市场份额分布、宗教信仰按中国人口比例分布

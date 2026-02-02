@@ -55,3 +55,8 @@ htmlcov/
 !src/**/*.json
 output/
 identities_*
+
+
+.sisyphus
+PythonScripts
+idcards

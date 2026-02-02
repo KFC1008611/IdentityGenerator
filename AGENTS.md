@@ -211,7 +211,7 @@ identity-gen preview      # Generate and display a sample identity
 ## Available Identity Fields (37 total)
 
 ### Personal (10)
-- `name` - Full name (GivenName Surname format)
+- `name` - Full name (Surname + GivenName format, e.g. 张三)
 - `first_name` - Given name (名)
 - `last_name` - Surname (姓)
 - `gender` - Gender (male/female)
