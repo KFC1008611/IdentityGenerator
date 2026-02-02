@@ -15,6 +15,7 @@ from rich.text import Text
 from .generator import IdentityGenerator
 from .models import IdentityConfig, IdentityField, OutputFormat
 from .formatters import IdentityFormatter
+from .idcard_image_generator import IDCardImageGenerator
 
 console = Console()
 logger = logging.getLogger(__name__)
@@ -78,7 +79,7 @@ def generate_default_filename(output_format: OutputFormat = OutputFormat.CSV) ->
     extensions = {
         OutputFormat.JSON: "json",
         OutputFormat.CSV: "csv",
-        OutputFormat.TABLE: "csv",
+        OutputFormat.TABLE: "txt",
         OutputFormat.RAW: "txt",
         OutputFormat.SQL: "sql",
         OutputFormat.MARKDOWN: "md",
@@ -151,6 +152,23 @@ def generate_default_filename(output_format: OutputFormat = OutputFormat.CSV) ->
     is_flag=True,
     help="Enable verbose logging",
 )
+@click.option(
+    "--idcard/--no-idcard",
+    default=True,
+    help="Generate ID card images along with text data (default: enabled)",
+    show_default=True,
+)
+@click.option(
+    "--idcard-dir",
+    default="idcards",
+    help="Output directory for ID card images",
+    show_default=True,
+)
+@click.option(
+    "--idcard-no-avatar",
+    is_flag=True,
+    help="Generate ID cards without avatars",
+)
 @click.pass_context
 def cli(
     ctx: click.Context,
@@ -163,6 +181,9 @@ def cli(
     exclude: tuple,
     seed: Optional[int],
     verbose: bool,
+    idcard: bool,
+    idcard_dir: str,
+    idcard_no_avatar: bool,
 ) -> None:
     """Chinese Identity Generator CLI.
 
@@ -217,6 +238,11 @@ def cli(
                 logger.info(f"  Include fields: {', '.join(include)}")
             if exclude:
                 logger.info(f"  Exclude fields: {', '.join(exclude)}")
+            if idcard and not stdout:
+                logger.info(f"  Generate ID cards: enabled")
+                logger.info(f"  ID card directory: {idcard_dir}")
+                if idcard_no_avatar:
+                    logger.info(f"  ID card avatars: disabled")
 
             config = IdentityConfig(
                 locale=locale,
@@ -255,6 +281,33 @@ def cli(
                 else:
                     size_str = f"{file_size / (1024 * 1024):.1f} MB"
                 logger.info(f"  File size: {size_str}")
+
+                # Generate ID card images if enabled
+                if idcard:
+                    logger.info("Generating ID card images...")
+                    idcard_output = Path(idcard_dir)
+                    idcard_output.mkdir(parents=True, exist_ok=True)
+
+                    idcard_generator = IDCardImageGenerator()
+
+                    # Create filename pattern based on output filename
+                    base_name = Path(output_path).stem
+                    pattern = f"{base_name}_{{index:04d}}.png"
+
+                    saved_files = idcard_generator.generate_batch(
+                        identities=identities,
+                        output_dir=idcard_output,
+                        filename_pattern=pattern,
+                        include_avatar=not idcard_no_avatar,
+                    )
+
+                    logger.info(
+                        f"✓ Successfully generated {len(saved_files)} ID card image(s)"
+                    )
+                    for file_path in saved_files[:5]:  # Show first 5
+                        logger.info(f"  - {file_path}")
+                    if len(saved_files) > 5:
+                        logger.info(f"  ... and {len(saved_files) - 5} more")
             else:
                 # Output to stdout
                 print(formatted)
@@ -339,6 +392,109 @@ def preview(locale: str) -> None:
     for key, value in data.items():
         if value is not None:
             console.print(f"[bold]{key.replace('_', ' ').title()}:[/bold] {value}")
+
+
+@cli.command(name="generate-idcard")
+@click.option(
+    "--count",
+    "-n",
+    default=1,
+    type=int,
+    help="Number of ID cards to generate",
+    show_default=True,
+)
+@click.option(
+    "--output-dir",
+    "-o",
+    default="idcards",
+    help="Output directory for ID card images",
+    show_default=True,
+)
+@click.option(
+    "--include-avatar",
+    is_flag=True,
+    default=True,
+    help="Include avatar image on ID card",
+)
+@click.option(
+    "--no-avatar",
+    is_flag=True,
+    help="Generate ID card without avatar",
+)
+@click.option(
+    "--seed",
+    "-s",
+    type=int,
+    help="Random seed for reproducible generation",
+)
+@click.option(
+    "--filename-pattern",
+    "-f",
+    default="{name}_idcard.png",
+    help="Filename pattern (available placeholders: {name}, {ssn}, {index})",
+    show_default=True,
+)
+def generate_idcard(
+    count: int,
+    output_dir: str,
+    include_avatar: bool,
+    no_avatar: bool,
+    seed: Optional[int],
+    filename_pattern: str,
+) -> None:
+    """Generate Chinese ID card images.
+
+    Generates realistic Chinese ID card images with random avatars.
+    Images are saved as PNG files in the specified output directory.
+    """
+    try:
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        if no_avatar:
+            include_avatar = False
+
+        logger.info(f"Generating {count} ID card image(s)")
+        logger.info(f"Output directory: {output_path.absolute()}")
+        logger.info(f"Include avatar: {include_avatar}")
+        if seed:
+            logger.info(f"Random seed: {seed}")
+
+        config = IdentityConfig(
+            locale="zh_CN",
+            count=count,
+            seed=seed,
+            include_fields=[
+                "name",
+                "gender",
+                "ethnicity",
+                "birthdate",
+                "address",
+                "ssn",
+            ],
+        )
+
+        logger.info("Generating identity data...")
+        generator = IdentityGenerator(config)
+        identities = generator.generate_batch()
+
+        logger.info("Generating ID card images...")
+        idcard_generator = IDCardImageGenerator()
+
+        saved_files = idcard_generator.generate_batch(
+            identities=identities,
+            output_dir=output_path,
+            filename_pattern=filename_pattern,
+            include_avatar=include_avatar,
+        )
+
+        logger.info(f"✓ Successfully generated {len(saved_files)} ID card image(s)")
+        for file_path in saved_files:
+            logger.info(f"  - {file_path}")
+
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        sys.exit(1)
 
 
 def main() -> None:

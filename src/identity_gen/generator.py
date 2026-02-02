@@ -146,7 +146,7 @@ def generate_chinese_name(gender: Optional[str] = None) -> Tuple[str, str, str, 
         char3 = random.choice(name_pool)
         given_name = char1 + char2 + char3
 
-    full_name = f"{given_name} {surname}"
+    full_name = f"{surname}{given_name}"
     return full_name, given_name, surname, gender
 
 
@@ -456,16 +456,16 @@ def generate_emergency_contact(main_name: str) -> Tuple[str, str]:
     _, given_name, surname, _ = generate_chinese_name()
 
     if relationship == "父亲":
-        main_surname = (
-            main_name.split()[1]
-            if " " in main_name
-            else random.choice(china_data.SURNAMES[:20])
-        )
+        main_surname = random.choice(china_data.SURNAMES[:20])
+        for s in china_data.SURNAMES:
+            if main_name.startswith(s):
+                main_surname = s
+                break
         contact_name = f"{main_surname}{random.choice(china_data.MALE_NAMES[:50])}"
     elif relationship == "母亲":
         contact_name = f"{surname}{random.choice(china_data.FEMALE_NAMES[:50])}"
     else:
-        contact_name = f"{given_name} {surname}"
+        contact_name = f"{surname}{given_name}"
 
     return contact_name, relationship
 
