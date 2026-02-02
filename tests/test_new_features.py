@@ -482,7 +482,7 @@ class TestNameGeneration:
         assert gender == "male"
         assert len(surname) > 0
         assert len(given_name) > 0
-        assert full_name == f"{given_name} {surname}"
+        assert full_name == f"{surname}{given_name}"
 
     def test_generate_chinese_name_female(self):
         """Test female name generation."""

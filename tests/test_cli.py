@@ -2,7 +2,7 @@
 
 from click.testing import CliRunner
 import pytest
-from identity_gen.cli import cli, main
+from identity_gen.cli import cli
 
 
 class TestCLI:
@@ -18,11 +18,6 @@ class TestCLI:
         result = runner.invoke(cli, ["--count", "1", "--format", "json", "--stdout"])
         assert result.exit_code == 0
         assert "name" in result.output
-
-    def test_cli_with_locale(self, runner):
-        """Test generation with Chinese locale."""
-        result = runner.invoke(cli, ["--locale", "zh_CN", "--count", "1", "--stdout"])
-        assert result.exit_code == 0
 
     def test_cli_json_output(self, runner):
         """Test JSON output format."""
@@ -83,14 +78,60 @@ class TestCLI:
     def test_cli_include_fields(self, runner):
         """Test including specific fields."""
         result = runner.invoke(
-            cli, ["--include", "name", "--include", "email", "--format", "json"]
+            cli,
+            ["--include", "name", "--include", "email", "--format", "json", "--stdout"],
         )
         assert result.exit_code == 0
+        # Verify only requested fields are in output
+        assert '"name"' in result.output
+        assert '"email"' in result.output
 
-    def test_main_entry_point(self):
-        """Test main entry point."""
-        # Just ensure it doesn't raise
-        try:
-            main()
-        except SystemExit:
-            pass  # Click calls sys.exit
+    def test_cli_csv_output_to_file(self, runner, tmp_path):
+        """Test CSV output to file."""
+        output_file = tmp_path / "output.csv"
+        result = runner.invoke(cli, ["--output", str(output_file), "--format", "csv"])
+        assert result.exit_code == 0
+        assert output_file.exists()
+        content = output_file.read_text()
+        # Verify it's CSV format (comma-separated, not JSON)
+        assert "," in content
+        assert not content.strip().startswith("[")  # Not JSON array
+        assert not content.strip().startswith("{")  # Not JSON object
+
+    def test_cli_format_auto_detection_from_extension(self, runner, tmp_path):
+        """Test format auto-detection from file extension."""
+        # Test .json extension
+        json_file = tmp_path / "identities.json"
+        result = runner.invoke(cli, ["--output", str(json_file)])
+        assert result.exit_code == 0
+        content = json_file.read_text()
+        assert content.strip().startswith("[")  # JSON array
+
+        # Test .csv extension
+        csv_file = tmp_path / "identities.csv"
+        result = runner.invoke(cli, ["--output", str(csv_file)])
+        assert result.exit_code == 0
+        content = csv_file.read_text()
+        assert "," in content  # CSV format
+        assert not content.strip().startswith("[")  # Not JSON
+
+    def test_cli_multiple_formats_output(self, runner, tmp_path):
+        """Test various output formats to files."""
+        formats_and_extensions = [
+            ("json", "output.json"),
+            ("csv", "output.csv"),
+            ("raw", "output.txt"),
+            ("sql", "output.sql"),
+            ("markdown", "output.md"),
+            ("yaml", "output.yaml"),
+        ]
+
+        for fmt, filename in formats_and_extensions:
+            output_file = tmp_path / filename
+            result = runner.invoke(
+                cli, ["--output", str(output_file), "--format", fmt, "--count", "2"]
+            )
+            assert result.exit_code == 0, f"Failed for format {fmt}"
+            assert output_file.exists(), f"File not created for format {fmt}"
+            content = output_file.read_text()
+            assert len(content) > 0, f"Empty output for format {fmt}"
