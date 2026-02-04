@@ -51,6 +51,8 @@ htmlcov/
 *.txt
 !requirements.txt
 !pyproject.toml
+# Local secrets
+src/identity_gen/config.py
 # Allow project data files
 !src/**/*.json
 output/
