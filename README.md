@@ -10,7 +10,7 @@
 ## 功能特性
 
 - **中文身份生成**: 专门生成逼真的中文身份信息（姓名、地址、身份证号等）
-- **身份证图片生成**: 生成逼真的身份证图片，包含自动生成的虚拟人像
+- **身份证图片生成**: 生成逼真的身份证图片，包含使用 DiceBear 库生成的精美头像
 - **多种输出格式**: JSON、CSV、表格、纯文本、SQL、Markdown、YAML、vCard
 - **批量生成**: 单次可生成 1-10,000 个身份
 - **字段定制**: 选择包含或排除特定字段
@@ -41,6 +41,7 @@ pip install -e .
 
 ### 依赖要求
 
+**核心依赖：**
 - Python 3.8+
 - click >= 8.0.0
 - faker >= 18.0.0
@@ -49,6 +50,16 @@ pip install -e .
 - rich >= 13.0.0
 - Pillow >= 9.0.0（身份证图片生成）
 - numpy >= 1.20.0（身份证图片生成）
+- random-face >= 2021.7.21（头像生成）
+
+**AI 头像生成（可选但推荐）：**
+- diffusers >= 0.21.0
+- transformers >= 4.30.0
+- torch >= 2.0.0
+- huggingface-hub >= 0.16.0
+- accelerate >= 0.20.0
+- safetensors >= 0.3.0
+- volcengine-python-sdk[ark]  # 火山方舟（ARK）头像生成
 
 ## 使用方法
 
@@ -331,13 +342,15 @@ END:VCARD
 
 ## 身份证图片生成
 
-工具现在**默认**会在生成文本身份信息的同时，自动生成对应的身份证图片。
+工具会在生成文本身份信息的同时生成对应的身份证图片，并在每次运行时提示选择头像生成方式。
 
 ### 默认行为
 
 当你运行主命令时，会同时生成：
 1. **文本数据文件**（CSV/JSON等格式）
 2. **身份证图片**（PNG格式，保存到 `idcards/` 目录）
+
+运行时会提示选择头像生成方式（AI 模型 / random_face / 备用剪影 / 不生成头像）。
 
 ```bash
 # 生成身份数据 + 身份证图片（默认行为）
@@ -360,6 +373,7 @@ identity-gen --count 5 --idcard-dir ./my_idcards
 
 # 生成不带头像的身份证图片
 identity-gen --count 5 --idcard-no-avatar
+
 
 # 组合使用
 identity-gen --count 10 --idcard-dir ./photos --idcard-no-avatar
@@ -413,20 +427,80 @@ identity-gen generate-idcard [OPTIONS]
   --help                       显示帮助信息
 ```
 
+### AI 模型配置（推荐）
+
+为了获得最高质量的 AI 生成头像，你可以配置 Stable Diffusion 模型：
+
+```bash
+# 查看可用的模型
+identity-gen model list
+
+# 交互式配置向导（推荐）
+identity-gen model configure
+
+# 直接下载特定模型
+identity-gen model download tiny-sd
+
+# 查看当前配置状态
+identity-gen model status
+
+# 删除已下载的模型
+identity-gen model delete tiny-sd
+```
+
+**可用模型：**
+- `tiny-sd` - Tiny Stable Diffusion (~1GB)，生成速度快，**推荐**
+- `small-sd` - Small Stable Diffusion (~1.5GB)，质量较好
+- `realistic-vision` - Realistic Vision (~4GB)，质量最高但较慢
+
+**自动配置（零配置体验）：**
+1. 首次运行 `identity-gen` 生成身份证时，系统会自动检测是否有 AI 模型
+2. 如果没有模型，会自动弹出交互式选择菜单，让你选择并下载模型
+3. 选择后自动下载并使用，无需手动配置
+4. 后续运行会直接使用已下载的模型，直到你删除它
+5. 所有模型缓存在 `~/.identity_gen/models/` 目录
+
+**手动管理（可选）：**
+如果你希望手动管理模型，可以使用以下命令：
+- `identity-gen model list` - 列出可用模型
+- `identity-gen model configure` - 手动配置向导
+- `identity-gen model download <model>` - 下载指定模型
+- `identity-gen model status` - 查看配置状态
+- `identity-gen model delete <model>` - 删除模型
+
 ### 身份证图片说明
 
 生成的身份证图片使用**真实身份证模板**，包括：
 - **真实模板背景**：使用标准身份证底板图片
 - **真实字体**：黑体、方正黑体、OCR-B等标准字体
 - **标准布局**：严格按照身份证规范排布文字和头像位置
-- **自动头像**：使用 Pillow 生成的虚拟人像（可禁用）
+- **自动头像**：使用 DiceBear 库生成的精美头像（可禁用）
 - **完整信息**：姓名、性别、民族、出生日期、住址、身份证号
 
 头像生成特点：
-- 支持男性和女性特征
+- 使用 DiceBear 的 avataaars 风格生成精美头像
+- 支持男性和女性特征（不同发型、面部毛发等）
 - 包含肤色、发色、服装颜色的随机组合
 - 添加噪点纹理增加真实感
 - 完全离线生成，不依赖外部头像图片
+
+### 火山方舟（ARK）头像生成（可选）
+
+使用火山方舟的大模型生成证件照风格头像（需联网）：
+
+```bash
+pip install --upgrade "volcengine-python-sdk[ark]"
+```
+
+配置方式：
+1. 复制示例配置文件
+   ```bash
+   cp src/identity_gen/config.py.example src/identity_gen/config.py
+   ```
+2. 在 `src/identity_gen/config.py` 中填写 `ARK_API_KEY` 和接入点
+3. 运行 `identity-gen` 时选择「火山方舟 (ARK)」作为头像后端
+
+提示词会根据性别与年龄自动调整为证件照规范描述，可在 `src/identity_gen/config.py` 中自定义。
 
 ### API 使用
 
@@ -547,7 +621,12 @@ for identity in identities:
 
 ## 版本历史
 
-- **v0.5.0** - 当前版本，新增身份证图片生成功能
+- **v0.5.1** - 当前版本，改进头像生成
+  - 使用 DiceBear 库替代 Pillow 绘制，生成更逼真的头像
+  - 头像包含丰富的个性化选项（发型、肤色、服装、配饰等）
+  - 新增依赖：dicebear >= 0.4.0
+
+- **v0.5.0** - 新增身份证图片生成功能
   - 新增身份证图片生成：使用 `identity-gen generate-idcard` 命令生成逼真的身份证图片
   - 自动生成虚拟人像：使用 Pillow 绘制，支持男/女性别特征，不依赖外部图片资源
   - 新增 `IDCardImageGenerator` 类和 `generate_idcard_image()` 便捷函数

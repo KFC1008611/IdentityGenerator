@@ -10,6 +10,27 @@ ID cards, phone numbers, and other identity data.
 ### Language Requirement
 **必须使用中文回答所有问题。** 无论用户使用什么语言提问，都应使用中文回复。
 
+### TODO List 机制（重要）
+为了支持跨会话工作连续性，本项目使用持久化的 TODO list：
+
+**规则：**
+1. **TODO.md 文件** - 所有待办事项必须记录在 `/Volumes/zt/dev/infogen/TODO.md`
+2. **任务命名** - 使用 `id-数字` 格式（如 test-1, cli-1）便于跟踪
+3. **状态标记** - 使用 `- [ ]` 未完成，`- [x]` 已完成
+4. **首次检查** - 每次开始工作时，**必须**先读取 TODO.md 了解当前状态
+5. **及时更新** - 完成任务后立即更新 TODO.md
+6. **定期同步** - 长时间任务（>30分钟）需更新进度
+
+**工作流：**
+```
+开始工作 → 读取 TODO.md → 选择任务 → 更新状态为进行中 → 执行 → 标记完成 → 更新 TODO.md
+```
+
+**优先级：**
+- 高优先级：核心功能、Bug修复、阻塞性问题
+- 中优先级：新功能、优化
+- 低优先级：文档、代码清理
+
 ### Documentation Maintenance
 **每次代码变更后必须评估文档更新需求：**
 1. 在完成任何代码修改后，立即评估相关文档（README.md、AGENTS.md等）是否需要同步更新
@@ -177,6 +198,9 @@ Runtime:
 - pydantic>=2.0.0
 - tabulate>=0.9.0
 - rich>=13.0.0
+- Pillow>=9.0.0
+- numpy>=1.20.0
+- dicebear>=0.4.0
 
 Dev (optional):
 - pytest>=7.0.0
@@ -286,7 +310,21 @@ identity-gen preview      # Generate and display a sample identity
 - ID Cards: GB 11643-1999 standard with valid checksum calculation
 
 ## Version
-Current version: 0.4.0
+Current version: 0.5.1
+
+## Recent Improvements (v0.5.1)
+
+### 1. 头像生成升级
+- **使用 DiceBear 库**：替换 Pillow 绘制，使用 DiceBear 的 avataaars 风格生成精美头像
+- **丰富的个性化选项**：
+  - 多种发型（长发、短发、卷发等）
+  - 不同肤色选择
+  - 各种服装颜色和款式
+  - 配饰支持（眼镜、太阳镜等）
+  - 男性面部毛发选项（胡须、胡茬等）
+- **性别特征区分**：男性和女性使用不同的发型和特征配置
+- **身份证照片风格处理**：白色背景、轻微模糊和噪点增加真实感
+- **新增依赖**：dicebear >= 0.4.0
 
 ## Recent Improvements (v0.4.0)
 

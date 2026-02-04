@@ -2,6 +2,8 @@
 """
 直接运行入口 - 无需安装
 用法: python run.py [options]
+
+或绕过交互式配置：echo 's' | python run.py --count 1
 """
 
 import sys
