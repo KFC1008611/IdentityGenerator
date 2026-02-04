@@ -40,7 +40,9 @@ class TestCLI:
     def test_cli_output_to_file(self, runner, tmp_path):
         """Test output to file."""
         output_file = tmp_path / "output.json"
-        result = runner.invoke(cli, ["--output", str(output_file), "--format", "json"])
+        result = runner.invoke(
+            cli, ["--output", str(output_file), "--format", "json", "--no-idcard"]
+        )
         assert result.exit_code == 0
         assert output_file.exists()
 
@@ -89,7 +91,9 @@ class TestCLI:
     def test_cli_csv_output_to_file(self, runner, tmp_path):
         """Test CSV output to file."""
         output_file = tmp_path / "output.csv"
-        result = runner.invoke(cli, ["--output", str(output_file), "--format", "csv"])
+        result = runner.invoke(
+            cli, ["--output", str(output_file), "--format", "csv", "--no-idcard"]
+        )
         assert result.exit_code == 0
         assert output_file.exists()
         content = output_file.read_text()
@@ -102,14 +106,14 @@ class TestCLI:
         """Test format auto-detection from file extension."""
         # Test .json extension
         json_file = tmp_path / "identities.json"
-        result = runner.invoke(cli, ["--output", str(json_file)])
+        result = runner.invoke(cli, ["--output", str(json_file), "--no-idcard"])
         assert result.exit_code == 0
         content = json_file.read_text()
         assert content.strip().startswith("[")  # JSON array
 
         # Test .csv extension
         csv_file = tmp_path / "identities.csv"
-        result = runner.invoke(cli, ["--output", str(csv_file)])
+        result = runner.invoke(cli, ["--output", str(csv_file), "--no-idcard"])
         assert result.exit_code == 0
         content = csv_file.read_text()
         assert "," in content  # CSV format
@@ -129,7 +133,16 @@ class TestCLI:
         for fmt, filename in formats_and_extensions:
             output_file = tmp_path / filename
             result = runner.invoke(
-                cli, ["--output", str(output_file), "--format", fmt, "--count", "2"]
+                cli,
+                [
+                    "--output",
+                    str(output_file),
+                    "--format",
+                    fmt,
+                    "--count",
+                    "2",
+                    "--no-idcard",
+                ],
             )
             assert result.exit_code == 0, f"Failed for format {fmt}"
             assert output_file.exists(), f"File not created for format {fmt}"
