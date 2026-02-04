@@ -1,0 +1,78 @@
+"""Example configuration for identity-gen (copy to config.py)."""
+
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class ArkConfig:
+    """Configuration for Volcano Ark SDK."""
+
+    api_key: str
+    base_url: str
+    model_id: str
+    timeout_seconds: int
+
+
+# Volcano Ark SDK settings
+ARK_API_KEY = os.getenv("ARK_API_KEY", "YOUR_ARK_API_KEY")
+ARK_BASE_URL = os.getenv("ARK_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3")
+ARK_MODEL_ID = os.getenv("ARK_MODEL_ID", "ep-20260204130806-ksx7n")
+ARK_TIMEOUT_SECONDS = int(os.getenv("ARK_TIMEOUT_SECONDS", "60"))
+
+
+def get_ark_config() -> ArkConfig:
+    """Return Ark SDK configuration (env overrides applied)."""
+
+    return ArkConfig(
+        api_key=ARK_API_KEY,
+        base_url=ARK_BASE_URL,
+        model_id=ARK_MODEL_ID,
+        timeout_seconds=ARK_TIMEOUT_SECONDS,
+    )
+
+
+# ID photo prompt configuration
+ID_PHOTO_BASE_PROMPT = (
+    "生成白底人像照片，人像正面平视镜头，五官清晰无遮挡，"
+    "面部光线均匀柔和无阴影、无反光，白底纯净无杂色无污渍；"
+    "人物居中，头顶留白明显，头部完整不裁切，画面包含完整头部与肩部，"
+    "构图稳定；"
+    "画质清晰，边缘轮廓明确，无模糊、无畸变，整体风格自然真实。"
+)
+
+ID_PHOTO_CLOTHING_OPTIONS = (
+    "商务正装",
+    "学生校服",
+    "日常简约上衣",
+)
+
+ID_PHOTO_DEFAULT_CLOTHING = "商务正装"
+ID_PHOTO_BAREHEAD = True
+
+# Gender/age descriptors used in prompts
+ID_PHOTO_AGE_GENDER_LABELS = {
+    "male": {
+        "child": "男孩",
+        "teen": "少年",
+        "young_adult": "青年男性",
+        "adult": "中年男性",
+        "senior": "老年男性",
+    },
+    "female": {
+        "child": "女孩",
+        "teen": "少女",
+        "young_adult": "青年女性",
+        "adult": "中年女性",
+        "senior": "老年女性",
+    },
+    "unknown": {
+        "child": "儿童",
+        "teen": "青少年",
+        "young_adult": "青年",
+        "adult": "成年人",
+        "senior": "老年人",
+    },
+}
