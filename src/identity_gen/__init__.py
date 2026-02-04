@@ -4,7 +4,7 @@ A Python CLI tool for generating realistic Chinese virtual identity information
 including names, addresses, ID cards, phone numbers, and other personal data.
 """
 
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 __author__ = "Identity Gen"
 __email__ = "identity@example.com"
 
