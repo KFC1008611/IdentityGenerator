@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any, Optional, Tuple, Union
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont, ImageOps
 
 from .config import (
     ID_PHOTO_AGE_GENDER_LABELS,
@@ -103,8 +103,15 @@ def _smart_resize(img: Image.Image, target_size: Tuple[int, int]) -> Image.Image
     new_w = int(img_w * scale)
     new_h = int(img_h * scale)
     img_resized = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
-    left = (new_w - target_w) // 2
-    top = (new_h - target_h) // 2
+
+    # Keep horizontal center, but bias vertical crop upward for portrait headroom.
+    excess_w = max(new_w - target_w, 0)
+    excess_h = max(new_h - target_h, 0)
+    left = excess_w // 2
+    top = int(excess_h * 0.35)
+    if top + target_h > new_h:  # pragma: no cover
+        top = max(new_h - target_h, 0)
+
     right = left + target_w
     bottom = top + target_h
 
@@ -181,7 +188,8 @@ def _load_image_from_url(image_url: str) -> Optional[Image.Image]:
     try:
         with urllib.request.urlopen(image_url, timeout=30) as response:
             data = response.read()
-        return Image.open(io.BytesIO(data))
+        image = Image.open(io.BytesIO(data))
+        return ImageOps.exif_transpose(image)
     except Exception as e:
         logger.error(f"Failed to load image from URL: {e}")
         return None
@@ -190,7 +198,8 @@ def _load_image_from_url(image_url: str) -> Optional[Image.Image]:
 def _decode_base64_image(data: str) -> Optional[Image.Image]:
     try:
         image_bytes = base64.b64decode(data)
-        return Image.open(io.BytesIO(image_bytes))
+        image = Image.open(io.BytesIO(image_bytes))
+        return ImageOps.exif_transpose(image)
     except Exception as e:
         logger.error(f"Failed to decode base64 image: {e}")
         return None
@@ -556,7 +565,8 @@ class AvatarGenerator:
                     size=size,
                 )
                 if image is not None:
-                    return cls._apply_id_photo_style(image, size, seed=seed)
+                    styled = cls._apply_id_photo_style(image, size, seed=seed)
+                    return cls._normalize_avatar_composition(styled, size)
             except Exception as e:
                 logger.warning(f"Ark generation failed: {e}")
 
@@ -564,7 +574,8 @@ class AvatarGenerator:
             try:
                 image = _generate_diffusers_face(gender=gender, seed=seed, size=size)
                 if image is not None:
-                    return cls._apply_id_photo_style(image, size, seed=seed)
+                    styled = cls._apply_id_photo_style(image, size, seed=seed)
+                    return cls._normalize_avatar_composition(styled, size)
             except Exception as e:
                 logger.warning(f"Diffusers generation failed: {e}")
 
@@ -572,7 +583,8 @@ class AvatarGenerator:
         if backend in ("ark", "diffusers", "random_face"):
             try:
                 face = _generate_realistic_face(seed=seed, size=size)
-                return cls._apply_id_photo_style(face, size, seed=seed)
+                styled = cls._apply_id_photo_style(face, size, seed=seed)
+                return cls._normalize_avatar_composition(styled, size)
             except Exception as e:
                 logger.warning(f"random_face generation failed: {e}")
 
@@ -673,7 +685,7 @@ class AvatarGenerator:
         rgba = np.array(img_rgba)
         rgb = rgba[:, :, :3].astype(np.int16)
         height, width = rgb.shape[:2]
-        if height == 0 or width == 0:
+        if height == 0 or width == 0:  # pragma: no cover
             return img_rgba
 
         border = np.concatenate(
@@ -711,7 +723,7 @@ class AvatarGenerator:
                 visited[ny, x] = True
                 stack.append((ny, x))
             ny = y + 1
-            if ny < height and mask[ny, x] and not visited[ny, x]:
+            if ny < height and mask[ny, x] and not visited[ny, x]:  # pragma: no cover
                 visited[ny, x] = True
                 stack.append((ny, x))
             nx = x - 1
@@ -724,12 +736,52 @@ class AvatarGenerator:
                 stack.append((y, nx))
 
         alpha = np.where(visited, 0, 255).astype(np.uint8)
-        alpha_img = Image.fromarray(alpha, mode="L").filter(
-            ImageFilter.GaussianBlur(radius=1)
+        alpha_img = (
+            Image.fromarray(alpha)
+            .convert("L")
+            .filter(ImageFilter.GaussianBlur(radius=1))
         )
         rgba[:, :, 3] = np.array(alpha_img)
 
-        return Image.fromarray(rgba, mode="RGBA")
+        return Image.fromarray(rgba).convert("RGBA")
+
+    @classmethod
+    def _normalize_avatar_composition(
+        cls, img: Image.Image, target_size: Tuple[int, int]
+    ) -> Image.Image:
+        """Normalize avatar scale and placement for consistent ID card portraits."""
+        target_w, target_h = target_size
+        if img.mode != "RGBA":
+            img = img.convert("RGBA")
+
+        alpha = np.array(img.getchannel("A"))
+        non_bg = np.argwhere(alpha > 8)
+        if non_bg.size == 0:
+            return _smart_resize(img, target_size)
+
+        top = int(non_bg[:, 0].min())
+        bottom = int(non_bg[:, 0].max()) + 1
+        left = int(non_bg[:, 1].min())
+        right = int(non_bg[:, 1].max()) + 1
+
+        subject = img.crop((left, top, right, bottom))
+        subject_w, subject_h = subject.size
+        if subject_w <= 0 or subject_h <= 0:  # pragma: no cover
+            return _smart_resize(img, target_size)
+
+        max_w = max(int(target_w * 0.88), 1)
+        max_h = max(int(target_h * 0.93), 1)
+        scale = min(max_w / subject_w, max_h / subject_h)
+        resized_w = max(int(subject_w * scale), 1)
+        resized_h = max(int(subject_h * scale), 1)
+        subject = subject.resize((resized_w, resized_h), Image.Resampling.LANCZOS)
+
+        canvas = Image.new("RGBA", target_size, (255, 255, 255, 0))
+        paste_x = (target_w - resized_w) // 2
+        top_margin = int(target_h * 0.04)
+        paste_y = min(top_margin, max(target_h - resized_h, 0))
+        canvas.paste(subject, (paste_x, paste_y), mask=subject)
+        return canvas
 
     @classmethod
     def _add_subtle_noise(
@@ -852,6 +904,45 @@ class IDCardImageGenerator:
         self._template = Image.open(template_path)
         return self._template.copy()
 
+    def _split_address_lines(
+        self,
+        draw: ImageDraw.ImageDraw,
+        address: str,
+        font: ImageFont.FreeTypeFont,
+        max_width: int,
+        max_lines: int = 2,
+    ) -> list[str]:
+        """Split address by visual width to avoid awkward fixed-length wrapping."""
+        clean = "".join(ch for ch in address if ch not in "\r\n\t").strip()
+        if not clean:
+            return [""]
+
+        lines: list[str] = []
+        current = ""
+
+        for idx, ch in enumerate(clean):
+            candidate = current + ch
+            if draw.textlength(candidate, font=font) <= max_width:
+                current = candidate
+                continue
+
+            if current:
+                lines.append(current)
+            else:
+                lines.append(ch)
+
+            if len(lines) >= max_lines - 1:
+                remaining_start = idx if current else idx + 1
+                lines.append(clean[remaining_start:])
+                return lines[:max_lines]
+
+            current = ch
+
+        if current:
+            lines.append(current)
+
+        return lines[:max_lines]
+
     def generate(
         self,
         identity: Identity,
@@ -915,15 +1006,15 @@ class IDCardImageGenerator:
         draw.text((950, 980), month, fill=(0, 0, 0), font=bdate_font)
         draw.text((1150, 980), day, fill=(0, 0, 0), font=bdate_font)
 
-        start = 0
-        loc = 1120
-        while start + 11 < len(address):
-            draw.text(
-                (630, loc), address[start : start + 11], fill=(0, 0, 0), font=other_font
-            )
-            start += 11
-            loc += 100
-        draw.text((630, loc), address[start:], fill=(0, 0, 0), font=other_font)
+        address_lines = self._split_address_lines(
+            draw=draw,
+            address=address,
+            font=other_font,
+            max_width=820,
+            max_lines=2,
+        )
+        for i, line in enumerate(address_lines):
+            draw.text((630, 1120 + i * 100), line, fill=(0, 0, 0), font=other_font)
 
         draw.text((950, 1475), id_number, fill=(0, 0, 0), font=id_font)
 

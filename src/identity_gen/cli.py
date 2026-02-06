@@ -199,6 +199,24 @@ def _prompt_avatar_backend() -> tuple[str, bool]:
     is_flag=True,
     help="Generate ID cards without avatars",
 )
+@click.option(
+    "--server",
+    is_flag=True,
+    help="Launch Flask web GUI server",
+)
+@click.option(
+    "--server-host",
+    default="127.0.0.1",
+    help="Web server host",
+    show_default=True,
+)
+@click.option(
+    "--server-port",
+    default=5000,
+    type=click.IntRange(1, 65535),
+    help="Web server port",
+    show_default=True,
+)
 @click.pass_context
 def cli(
     ctx: click.Context,
@@ -207,13 +225,16 @@ def cli(
     output_format: str,
     output: Optional[str],
     stdout: bool,
-    include: tuple,
-    exclude: tuple,
+    include: tuple[str, ...],
+    exclude: tuple[str, ...],
     seed: Optional[int],
     verbose: bool,
     idcard: bool,
     idcard_dir: str,
     idcard_no_avatar: bool,
+    server: bool,
+    server_host: str,
+    server_port: int,
 ) -> None:
     """Chinese Identity Generator CLI.
 
@@ -229,6 +250,14 @@ def cli(
     # If no subcommand, run default generation
     if ctx.invoked_subcommand is None:
         try:
+            if server:
+                logger.info("Starting web server mode")
+                logger.info(f"  URL: http://{server_host}:{server_port}")
+                from .web import run_web_server
+
+                run_web_server(host=server_host, port=server_port)
+                return
+
             # Determine output path
             if stdout:
                 output_path = None
@@ -672,11 +701,6 @@ def model_configure() -> None:
                 console.print(
                     "This may take several minutes depending on your connection.\n"
                 )
-
-                # Simple progress callback
-                def progress_callback(progress):
-                    percent = int(progress * 100)
-                    console.print(f"Progress: {percent}%", end="\r")
 
                 success = model_manager.download_model(selected_key)
 

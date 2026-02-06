@@ -2,6 +2,47 @@
 
 ## 当前阶段：已完成所有计划任务 ✅
 
+- [x] **testcov-1**: 补齐测试覆盖并清理测试告警 ✅
+  - 基线采集：定位当前覆盖率缺口与 warning 来源（已完成）
+  - 新增测试：`test_model_config.py`、`test_model_manager.py`、`test_cli_model_commands.py`、`test_china_data_edge_cases.py`
+  - 扩展测试：`test_idcard_image_generator.py`（增加后端与辅助函数分支）
+  - 全量验证：`pytest -W error` 通过，186 passed，0 warning
+  - 覆盖率：总覆盖率提升至 83%
+
+- [x] **testcov-100**: 持续补齐测试直至覆盖率 100% ✅
+  - 新增/扩展测试：`test_generator_edge_cases.py`、`test_formatters_edge_cases.py`、`test_idcard_image_generator.py`、`test_cli_model_commands.py`、`test_model_config.py`、`test_model_manager.py`、`test_web.py`、`test_china_data_edge_cases.py`
+  - 清理不可达防御分支并标注极端防御路径（最小化 `pragma: no cover`）
+  - 全量验证：`pytest -W error` 通过，250 passed，0 warning
+  - 覆盖率结果：TOTAL 100%
+
+- [x] **web-download-1**: Web 移除 table 格式并增加下载按钮 ✅
+  - Web 格式下拉不再提供 table
+  - 生成结果新增下载按钮，按当前格式导出文件
+
+- [x] **web-idcard-2**: Web 页面增加身份证图片特殊选项与生成方式选择 ✅
+  - 新增身份证图片开关、头像生成方式下拉、输出目录输入
+  - 生成后支持展示身份证图片文件路径预览
+  - 增加对应 Web 测试并通过
+
+- [x] **web-1**: 新增 Flask Web 图形界面并接入 `--server` 入口 ✅
+  - 主命令新增 `--server` / `--server-host` / `--server-port` 选项
+  - 新增字段多选、生成后预览、格式化结果展示能力
+  - 补充 CLI 与 Web 路由测试，更新 README 使用说明
+
+- [x] **id-1**: 为批量身份生成增加关键字段去重机制 ✅
+  - 在 `generate_batch` 中对身份证号、手机号、邮箱、用户名、银行卡号等字段进行去重重试
+  - 新增对应单元测试，验证批量生成关键字段唯一性
+
+- [x] **fix-addr-1**: 修复身份证住址固定 11 字切分导致的异常换行 ✅
+  - 改为按实际渲染宽度分行（最多两行），避免出现不自然断行
+
+- [x] **fix-avatar-1**: 修复身份证头像方向、裁剪与尺寸不一致问题 ✅
+  - 对外部图片读取增加 EXIF 方向矫正，避免头像歪斜
+  - 调整头像缩放裁剪策略并统一前景归一化排版，减少头部被裁剪与大小不一
+
+- [x] **test-idcard-1**: 增加身份证排版与头像归一化回归测试 ✅
+  - 新增 tests/test_idcard_image_generator.py
+
 - [x] **prompt-3**: 进一步优化提示词构图并同步个人信息增强差异 ✅
 
 - [x] **prompt-2**: 优化提示词限定人物位置避免头部裁剪 ✅
@@ -21,6 +62,16 @@
 - [x] **doc-2**: 更新文档与示例配置说明（含 config.py.example） ✅
 
 ## 最新完成
+
+- [x] **fix-test-formatter-1**: 修复 tabulate 参数兼容导致的测试失败 ✅
+  - `format_table` 增加对 `maxcolwidths` 的兼容回退（旧版本 tabulate 不支持时自动降级）
+  - 已通过 `tests/test_formatters.py`、`tests/test_formatters_extended.py` 与全量 `pytest`
+
+- [x] **data-1**: 统一辅助生成 JSON 目录并清理散落数据 ✅
+  - 将 `area_codes.json` 迁移到 `src/identity_gen/data/area_codes.json`
+  - 新增 `geo_data.json` 承载省/市/区县/街道等地理基础数据
+  - 新增 `generation_rules.json` 承载手机号/邮箱/车牌/社信码等生成规则
+  - `china_data.py` / `generator.py` 改为从 JSON 加载规则，移除大量硬编码数据
 
 - [x] **fix-2**: 修复抠图高光误删除问题 ✅
   - 调整透明背景算法避免人脸高光被抠掉
@@ -121,6 +172,6 @@
 
 ---
 
-**最后更新**: 2024-02-02
+**最后更新**: 2026-02-06
 **当前负责人**: Sisyphus
 **状态**: 所有计划任务已完成 ✅

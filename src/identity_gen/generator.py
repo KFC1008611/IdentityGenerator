@@ -1,9 +1,11 @@
 """Enhanced Chinese identity generation logic with improved data quality and field correlations."""
 
+import json
 import logging
+import os
 import random
 from datetime import date
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Tuple, Any, Set, cast
 
 from faker import Faker
 
@@ -11,6 +13,28 @@ from .models import Identity, IdentityConfig
 from . import china_data
 
 logger = logging.getLogger(__name__)
+
+
+def _load_generation_rules() -> Dict[str, Any]:
+    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+    rules_path = os.path.join(data_dir, "generation_rules.json")
+    with open(rules_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+_GENERATION_RULES = _load_generation_rules().get("generator", {})
+_PHONE_RULES: Dict[str, Any] = _GENERATION_RULES.get("phone", {})
+_EMAIL_RULES: Dict[str, Any] = _GENERATION_RULES.get("email", {})
+_USERNAME_RULES: Dict[str, Any] = _GENERATION_RULES.get("username", {})
+_NAME_PATTERN_RULES: Dict[str, float] = _GENERATION_RULES.get(
+    "name_pattern_weights", {}
+)
+_ZODIAC_RULES: Dict[str, Any] = _GENERATION_RULES.get("zodiac", {})
+_CHINESE_ZODIAC_RULES: Dict[str, Any] = _GENERATION_RULES.get("chinese_zodiac", {})
+_SOCIAL_CREDIT_RULES: Dict[str, Any] = _GENERATION_RULES.get("social_credit", {})
+_EMERGENCY_RULES: Dict[str, Any] = _GENERATION_RULES.get("emergency", {})
+_HOBBY_RULES: Dict[str, Any] = _GENERATION_RULES.get("hobbies", {})
+_DEFAULT_RULES: Dict[str, Any] = _GENERATION_RULES.get("defaults", {})
 
 
 def calculate_chinese_id_checksum(id_17: str) -> str:
@@ -51,66 +75,12 @@ def generate_chinese_id_card(
 
 def generate_chinese_phone() -> str:
     """Generate a realistic Chinese mobile phone number with carrier distribution."""
-    mobile_prefixes = [
-        "134",
-        "135",
-        "136",
-        "137",
-        "138",
-        "139",
-        "147",
-        "150",
-        "151",
-        "152",
-        "157",
-        "158",
-        "159",
-        "178",
-        "182",
-        "183",
-        "184",
-        "187",
-        "188",
-        "198",
-    ]
-    unicom_prefixes = [
-        "130",
-        "131",
-        "132",
-        "145",
-        "155",
-        "156",
-        "166",
-        "175",
-        "176",
-        "185",
-        "186",
-    ]
-    telecom_prefixes = [
-        "133",
-        "149",
-        "153",
-        "173",
-        "177",
-        "180",
-        "181",
-        "189",
-        "199",
-    ]
-    virtual_prefixes = ["170", "171"]
-
-    carrier_type = random.choices(
-        ["mobile", "unicom", "telecom", "virtual"], weights=[58, 26, 15, 1], k=1
-    )[0]
-
-    if carrier_type == "mobile":
-        prefix = random.choice(mobile_prefixes)
-    elif carrier_type == "unicom":
-        prefix = random.choice(unicom_prefixes)
-    elif carrier_type == "telecom":
-        prefix = random.choice(telecom_prefixes)
-    else:
-        prefix = random.choice(virtual_prefixes)
+    carrier_weights = _PHONE_RULES.get("carrier_weights", {})
+    carrier_types = list(carrier_weights.keys())
+    carrier_probs = list(carrier_weights.values())
+    prefixes = _PHONE_RULES.get("prefixes", {})
+    carrier_type = random.choices(carrier_types, weights=carrier_probs, k=1)[0]
+    prefix = random.choice(prefixes.get(carrier_type, prefixes.get("mobile", [])))
 
     suffix = "".join([str(random.randint(0, 9)) for _ in range(8)])
     return prefix + suffix
@@ -123,11 +93,9 @@ def generate_chinese_name(gender: Optional[str] = None) -> Tuple[str, str, str, 
 
     surname = china_data.get_weighted_surname()
 
-    name_pattern = random.choices(
-        ["single", "double", "triple"],
-        weights=[0.30, 0.65, 0.05],
-        k=1,
-    )[0]
+    name_patterns = list(_NAME_PATTERN_RULES.keys()) or ["single", "double", "triple"]
+    name_weights = list(_NAME_PATTERN_RULES.values()) or [0.30, 0.65, 0.05]
+    name_pattern = random.choices(name_patterns, weights=name_weights, k=1)[0]
 
     if gender == "male":
         name_pool = china_data.MALE_NAMES
@@ -154,60 +122,16 @@ def generate_chinese_email(
     name: Optional[str] = None, phone: Optional[str] = None
 ) -> str:
     """Generate a realistic Chinese email address with improved correlation."""
-    domains = [
-        ("qq.com", 35),
-        ("163.com", 20),
-        ("126.com", 10),
-        ("sina.com", 8),
-        ("sohu.com", 5),
-        ("aliyun.com", 5),
-        ("139.com", 4),
-        ("189.cn", 4),
-        ("wo.cn", 2),
-        ("outlook.com", 3),
-        ("gmail.com", 2),
-        ("hotmail.com", 1),
-        ("foxmail.com", 1),
-    ]
+    domains = _EMAIL_RULES.get("domains", [])
 
     domain_names, domain_weights = zip(*domains)
     domain = random.choices(domain_names, weights=domain_weights)[0]
 
     if phone and domain == "qq.com":
-        if random.random() < 0.6:
+        if random.random() < _EMAIL_RULES.get("qq_phone_probability", 0.6):
             return f"{phone}@qq.com"
 
-    pinyin_prefixes = [
-        "zhang",
-        "li",
-        "wang",
-        "liu",
-        "chen",
-        "yang",
-        "zhao",
-        "wu",
-        "zhou",
-        "xu",
-        "sun",
-        "ma",
-        "hu",
-        "guo",
-        "lin",
-        "he",
-        "gao",
-        "liang",
-        "zheng",
-        "xie",
-        "song",
-        "tang",
-        "han",
-        "feng",
-        "deng",
-        "cao",
-        "peng",
-        "zeng",
-        "xiao",
-    ]
+    pinyin_prefixes = _EMAIL_RULES.get("pinyin_prefixes", [])
 
     patterns = [
         lambda: f"{random.choice(pinyin_prefixes)}{random.randint(10, 9999)}",
@@ -237,42 +161,16 @@ def generate_chinese_job_title() -> str:
 
 def generate_chinese_username(name: Optional[str] = None) -> str:
     """Generate a Chinese-style username."""
-    pinyin_prefixes = [
-        "zhang",
-        "li",
-        "wang",
-        "liu",
-        "chen",
-        "yang",
-        "zhao",
-        "wu",
-        "zhou",
-        "xu",
-        "sun",
-        "ma",
-        "hu",
-        "guo",
-        "lin",
-        "he",
-        "gao",
-        "liang",
-        "zheng",
-        "xie",
-        "user",
-        "admin",
-        "test",
-        "demo",
-        "guest",
-        "member",
-        "vip",
-        "master",
-    ]
+    pinyin_prefixes = _USERNAME_RULES.get("pinyin_prefixes", [])
+    suffix_choices = _USERNAME_RULES.get(
+        "suffix_choices", ["vip", "cn", "zh", "88", "2024"]
+    )
 
     formats = [
         lambda p: f"{p}{random.randint(10, 9999)}",
         lambda p: f"{p}_{random.randint(10, 999)}",
         lambda p: f"{p}.{random.randint(100, 999)}",
-        lambda p: f"{p}_{random.choice(['vip', 'cn', 'zh', '88', '2024'])}",
+        lambda p: f"{p}_{random.choice(suffix_choices)}",
         lambda p: f"user_{random.randint(1000, 999999)}",
     ]
 
@@ -285,20 +183,7 @@ def get_zodiac_sign(birthdate: date) -> str:
     month = birthdate.month
     day = birthdate.day
 
-    zodiac_dates = [
-        ((3, 21), (4, 19), "白羊座"),
-        ((4, 20), (5, 20), "金牛座"),
-        ((5, 21), (6, 21), "双子座"),
-        ((6, 22), (7, 22), "巨蟹座"),
-        ((7, 23), (8, 22), "狮子座"),
-        ((8, 23), (9, 22), "处女座"),
-        ((9, 23), (10, 23), "天秤座"),
-        ((10, 24), (11, 22), "天蝎座"),
-        ((11, 23), (12, 21), "射手座"),
-        ((12, 22), (1, 19), "摩羯座"),
-        ((1, 20), (2, 18), "水瓶座"),
-        ((2, 19), (3, 20), "双鱼座"),
-    ]
+    zodiac_dates = _ZODIAC_RULES.get("date_ranges", [])
 
     for start, end, sign in zodiac_dates:
         start_month, start_day = start
@@ -319,44 +204,24 @@ def get_zodiac_sign(birthdate: date) -> str:
             ):
                 return sign
 
-    return "摩羯座"
+    return _ZODIAC_RULES.get("default_sign", "摩羯座")
 
 
 def get_chinese_zodiac(birthdate: date) -> str:
     """Get Chinese zodiac from birth year."""
-    animals = ["鼠", "牛", "虎", "兔", "龙", "蛇", "马", "羊", "猴", "鸡", "狗", "猪"]
+    animals = _CHINESE_ZODIAC_RULES.get(
+        "animals",
+        ["鼠", "牛", "虎", "兔", "龙", "蛇", "马", "羊", "猴", "鸡", "狗", "猪"],
+    )
+    base_year = _CHINESE_ZODIAC_RULES.get("base_year", 2020)
     year = birthdate.year
-    index = (year - 2020) % 12
+    index = (year - base_year) % len(animals)
     return animals[index]
 
 
 def generate_ip_address() -> str:
     """Generate a realistic Chinese IPv4 address."""
-    ip_types = [
-        ("10", 10),
-        ("172", 5),
-        ("192", 15),
-        ("116", 5),
-        ("117", 5),
-        ("118", 5),
-        ("119", 5),
-        ("120", 5),
-        ("121", 5),
-        ("122", 5),
-        ("123", 5),
-        ("124", 5),
-        ("125", 5),
-        ("126", 5),
-        ("202", 5),
-        ("203", 5),
-        ("210", 5),
-        ("211", 5),
-        ("218", 5),
-        ("219", 5),
-        ("220", 5),
-        ("221", 5),
-        ("222", 5),
-    ]
+    ip_types = _GENERATION_RULES.get("ip_types", [])
 
     first_octets, weights = zip(*ip_types)
     first = random.choices(first_octets, weights=weights)[0]
@@ -376,27 +241,7 @@ def generate_ip_address() -> str:
 
 def generate_mac_address() -> str:
     """Generate a random MAC address."""
-    oui_prefixes = [
-        "00:1A:2B",
-        "00:1C:C4",
-        "00:25:9E",
-        "00:0C:6E",
-        "64:69:4E",
-        "78:02:F8",
-        "AC:DE:48",
-        "00:08:22",
-        "00:15:EB",
-        "00:19:C6",
-        "00:22:93",
-        "00:1F:3A",
-        "00:24:11",
-        "00:26:C6",
-        "00:1F:16",
-        "00:E0:4C",
-        "00:1A:1E",
-        "00:21:CC",
-        "00:24:D6",
-    ]
+    oui_prefixes = _GENERATION_RULES.get("mac_oui_prefixes", [])
 
     oui = random.choice(oui_prefixes)
     remaining = ":".join([f"{random.randint(0, 255):02X}" for _ in range(3)])
@@ -405,8 +250,8 @@ def generate_mac_address() -> str:
 
 def generate_social_credit_code() -> str:
     """Generate a valid Chinese Unified Social Credit Code."""
-    authority_codes = ["1", "5", "9"]
-    org_types = ["1", "2", "3", "9"]
+    authority_codes = _SOCIAL_CREDIT_RULES.get("authority_codes", ["1", "5", "9"])
+    org_types = _SOCIAL_CREDIT_RULES.get("org_types", ["1", "2", "3", "9"])
 
     authority = random.choice(authority_codes)
     org_type = random.choice(org_types)
@@ -423,8 +268,10 @@ def generate_social_credit_code() -> str:
     org_code = "".join([str(random.randint(0, 9)) for _ in range(9)])
     code_17 = authority + org_type + area_code + org_code
 
-    chars = "0123456789ABCDEFGHJKLMNPQRTUWXY"
-    weights = [1, 3, 9, 27, 19, 26, 16, 17, 20, 29, 25, 13, 8, 24, 10, 30, 28]
+    chars = _SOCIAL_CREDIT_RULES.get("chars", "0123456789ABCDEFGHJKLMNPQRTUWXY")
+    weights = _SOCIAL_CREDIT_RULES.get(
+        "weights", [1, 3, 9, 27, 19, 26, 16, 17, 20, 29, 25, 13, 8, 24, 10, 30, 28]
+    )
 
     total = 0
     for i, char in enumerate(code_17):
@@ -441,14 +288,7 @@ def generate_social_credit_code() -> str:
 
 def generate_emergency_contact(main_name: str) -> Tuple[str, str]:
     """Generate an emergency contact with relationship."""
-    relationships = [
-        ("父亲", 25),
-        ("母亲", 25),
-        ("配偶", 30),
-        ("兄弟姐妹", 10),
-        ("子女", 5),
-        ("朋友", 5),
-    ]
+    relationships = _EMERGENCY_RULES.get("relationships", [])
 
     rel_names, rel_weights = zip(*relationships)
     relationship = random.choices(rel_names, weights=rel_weights)[0]
@@ -456,14 +296,19 @@ def generate_emergency_contact(main_name: str) -> Tuple[str, str]:
     _, given_name, surname, _ = generate_chinese_name()
 
     if relationship == "父亲":
-        main_surname = random.choice(china_data.SURNAMES[:20])
+        fallback_pool = _EMERGENCY_RULES.get("fallback_surname_pool_size", 20)
+        main_surname = random.choice(china_data.SURNAMES[:fallback_pool])
         for s in china_data.SURNAMES:
             if main_name.startswith(s):
                 main_surname = s
                 break
-        contact_name = f"{main_surname}{random.choice(china_data.MALE_NAMES[:50])}"
+        name_pool = _EMERGENCY_RULES.get("gender_name_pool_size", 50)
+        contact_name = (
+            f"{main_surname}{random.choice(china_data.MALE_NAMES[:name_pool])}"
+        )
     elif relationship == "母亲":
-        contact_name = f"{surname}{random.choice(china_data.FEMALE_NAMES[:50])}"
+        name_pool = _EMERGENCY_RULES.get("gender_name_pool_size", 50)
+        contact_name = f"{surname}{random.choice(china_data.FEMALE_NAMES[:name_pool])}"
     else:
         contact_name = f"{surname}{given_name}"
 
@@ -472,75 +317,40 @@ def generate_emergency_contact(main_name: str) -> Tuple[str, str]:
 
 def generate_hobbies() -> str:
     """Generate realistic hobbies."""
-    hobby_categories = {
-        "sports": [
-            "跑步",
-            "游泳",
-            "篮球",
-            "足球",
-            "羽毛球",
-            "乒乓球",
-            "网球",
-            "健身",
-            "瑜伽",
-            "骑行",
-            "登山",
-            "滑雪",
-        ],
-        "arts": [
-            "绘画",
-            "书法",
-            "摄影",
-            "音乐",
-            "舞蹈",
-            "唱歌",
-            "乐器",
-            "写作",
-            "阅读",
-            "看电影",
-            "看剧",
-            "追综艺",
-        ],
-        "entertainment": [
-            "打游戏",
-            "追剧",
-            "刷短视频",
-            "看直播",
-            "K歌",
-            "桌游",
-            "密室逃脱",
-            "剧本杀",
-        ],
-        "outdoor": ["旅游", "露营", "徒步", "钓鱼", "摄影采风", "自驾游"],
-        "food": ["烹饪", "烘焙", "品茶", "咖啡", "探店", "美食"],
-        "learning": ["学习外语", "编程", "阅读", "听播客", "看纪录片", "在线课程"],
-        "social": ["聚会", "交友", "社团活动", "志愿服务", "公益活动"],
-        "collection": ["集邮", "收藏", "手办", "模型", "乐高", "盲盒"],
-        "crafts": ["手工", "DIY", "编织", "刺绣", "木工", "陶艺"],
-    }
-
-    num_categories = random.choices([1, 2, 3, 4], weights=[10, 40, 35, 15])[0]
+    hobby_categories = _HOBBY_RULES.get("categories", {})
+    category_weights = _HOBBY_RULES.get(
+        "category_count_weights", [[1, 10], [2, 40], [3, 35], [4, 15]]
+    )
+    num_options, num_weights = zip(*category_weights)
+    num_categories = random.choices(num_options, weights=num_weights)[0]
     selected_categories = random.sample(list(hobby_categories.keys()), num_categories)
 
     hobbies = []
     for category in selected_categories:
-        num_hobbies = random.choices([1, 2], weights=[70, 30])[0]
+        hobby_count_weights = _HOBBY_RULES.get(
+            "per_category_hobby_count_weights", [[1, 70], [2, 30]]
+        )
+        count_options, count_weights = zip(*hobby_count_weights)
+        num_hobbies = random.choices(count_options, weights=count_weights)[0]
         hobbies.extend(random.sample(hobby_categories[category], num_hobbies))
 
-    hobbies = hobbies[:5]
+    if len(hobbies) < 2 and hobby_categories:
+        remaining = [
+            h
+            for values in hobby_categories.values()
+            for h in values
+            if h not in hobbies
+        ]
+        if remaining:
+            hobbies.append(random.choice(remaining))
+
+    hobbies = hobbies[: _HOBBY_RULES.get("max_hobbies", 5)]
     return "、".join(hobbies)
 
 
 def get_religion() -> str:
     """Get a random religion based on Chinese population distribution."""
-    religions = [
-        ("无宗教信仰", 88.0),
-        ("佛教", 6.0),
-        ("道教", 1.5),
-        ("基督教", 2.5),
-        ("天主教", 0.5),
-        ("伊斯兰教", 1.5),
-    ]
+    religions = _GENERATION_RULES.get("religions", [])
 
     names, weights = zip(*religions)
     return random.choices(names, weights=weights)[0]
@@ -548,6 +358,18 @@ def get_religion() -> str:
 
 class IdentityGenerator:
     """Generator for Chinese virtual identity information."""
+
+    _DEDUP_FIELDS: List[str] = [
+        "ssn",
+        "phone",
+        "email",
+        "username",
+        "bank_card",
+        "social_credit_code",
+        "wechat_id",
+        "qq_number",
+    ]
+    _MAX_DEDUP_RETRIES: int = 50
 
     def __init__(self, config: IdentityConfig):
         """Initialize generator with configuration."""
@@ -633,11 +455,10 @@ class IdentityGenerator:
             identity_data["gender"] = gender
 
         if "ssn" in fields:
-            if not birthdate:
-                birthdate = self.faker.date_of_birth(minimum_age=18, maximum_age=70)
+            birthdate_for_ssn = cast(date, birthdate)
             area_code = address_bundle.get("area_code", "110101")
             identity_data["ssn"] = generate_chinese_id_card(
-                birthdate, area_code, gender
+                birthdate_for_ssn, area_code, gender
             )
 
         if address_bundle:
@@ -651,7 +472,7 @@ class IdentityGenerator:
                 identity_data["zipcode"] = address_bundle["zipcode"]
 
         if "country" in fields:
-            identity_data["country"] = "中国"
+            identity_data["country"] = _DEFAULT_RULES.get("country", "中国")
 
         if "phone" in fields:
             phone = generate_chinese_phone()
@@ -763,9 +584,40 @@ class IdentityGenerator:
         count = count or self.config.count
         logger.info(f"Generating {count} Chinese identities")
 
-        identities = []
+        effective_fields = self.config.get_effective_fields()
+        dedup_fields = [f for f in self._DEDUP_FIELDS if f in effective_fields]
+        seen_values: Dict[str, Set[str]] = {field: set() for field in dedup_fields}
+
+        identities: List[Identity] = []
         for i in range(count):
             identity = self.generate()
+            retry_count = 0
+
+            while dedup_fields:
+                duplicate_fields = [
+                    field
+                    for field in dedup_fields
+                    if getattr(identity, field)
+                    and getattr(identity, field) in seen_values[field]
+                ]
+                if not duplicate_fields:
+                    break
+
+                retry_count += 1
+                if retry_count >= self._MAX_DEDUP_RETRIES:
+                    logger.warning(
+                        "Max dedup retries reached at record %s; accepting possible duplicates in: %s",
+                        i + 1,
+                        ", ".join(duplicate_fields),
+                    )
+                    break
+                identity = self.generate()
+
+            for field in dedup_fields:
+                value = getattr(identity, field)
+                if value:
+                    seen_values[field].add(value)
+
             identities.append(identity)
             logger.debug(f"Generated identity {i + 1}/{count}")
 
@@ -773,4 +625,4 @@ class IdentityGenerator:
 
     def get_supported_locales(self) -> List[str]:
         """Get list of supported locales."""
-        return ["zh_CN"]
+        return _DEFAULT_RULES.get("supported_locales", ["zh_CN"])

@@ -148,3 +148,21 @@ class TestCLI:
             assert output_file.exists(), f"File not created for format {fmt}"
             content = output_file.read_text()
             assert len(content) > 0, f"Empty output for format {fmt}"
+
+    def test_cli_server_option_invokes_web_server(self, runner, monkeypatch):
+        """Test --server option dispatches to Flask entrypoint."""
+        captured = {}
+
+        def fake_run_web_server(host: str = "127.0.0.1", port: int = 5000) -> None:
+            captured["host"] = host
+            captured["port"] = port
+
+        monkeypatch.setattr("identity_gen.web.run_web_server", fake_run_web_server)
+
+        result = runner.invoke(
+            cli,
+            ["--server", "--server-host", "0.0.0.0", "--server-port", "5055"],
+        )
+
+        assert result.exit_code == 0
+        assert captured == {"host": "0.0.0.0", "port": 5055}

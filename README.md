@@ -13,6 +13,7 @@
 - **身份证图片生成**: 生成逼真的身份证图片，包含使用 DiceBear 库生成的精美头像
 - **多种输出格式**: JSON、CSV、表格、纯文本、SQL、Markdown、YAML、vCard
 - **批量生成**: 单次可生成 1-10,000 个身份
+- **关键字段去重**: 批量生成时会对身份证号、手机号、邮箱、用户名、银行卡号等关键字段进行去重重试
 - **字段定制**: 选择包含或排除特定字段
 - **可重复生成**: 支持随机种子，确保结果可复现
 - **文件输出**: 支持输出到文件或标准输出
@@ -77,6 +78,9 @@ identity-gen --count 5
 # 只生成文本数据，不生成身份证图片
 identity-gen --count 5 --no-idcard
 
+# 启动 Web 图形界面（Flask）
+identity-gen --server
+
 # 输出为 JSON（通过后缀名或 --format）
 identity-gen --output data.json --count 10
 identity-gen --format json --count 10
@@ -115,7 +119,31 @@ identity-gen [OPTIONS]
   --idcard / --no-idcard  是否同时生成身份证图片 (默认: 启用)
   --idcard-dir TEXT       身份证图片输出目录 (默认: idcards)
   --idcard-no-avatar      生成不带头像的身份证图片
+  --server                启动 Flask Web 图形界面
+  --server-host TEXT      Web 服务监听地址 (默认: 127.0.0.1)
+  --server-port INTEGER   Web 服务端口 (默认: 5000)
   --help                  显示帮助信息
+```
+
+### Web 图形界面
+
+使用 `--server` 可开启浏览器界面，支持：
+
+- 可选字段列（多选，不选则默认全部字段）
+- 生成数量与随机种子输入
+- 身份证图片特殊选项（可开关）
+- 身份证头像生成方式选择（自动/ARK/diffusers/random_face/备用剪影/不生成头像）
+- 自定义身份证图片输出目录
+- 生成后表格预览（最多展示前 20 条）
+- 同步展示格式化结果（JSON/CSV/RAW/SQL/Markdown/YAML/vCard）
+- 提供下载按钮，可按当前所选格式下载生成结果文件
+
+```bash
+# 默认地址：http://127.0.0.1:5000
+identity-gen --server
+
+# 自定义监听地址和端口
+identity-gen --server --server-host 0.0.0.0 --server-port 8080
 ```
 
 ### 子命令
@@ -550,6 +578,9 @@ identity-gen/
 │           ├── names.json           # 姓名数据（300+姓氏）
 │           ├── jobs.json            # 职位数据（390+职位）
 │           ├── companies.json       # 公司数据
+│           ├── area_codes.json      # 区县到6位行政区编码映射
+│           ├── geo_data.json        # 省/市/区县/街道基础地理数据
+│           ├── generation_rules.json # 生成规则参数（手机号、邮箱、车牌等）
 │           ├── ethnicities.json     # 56个民族数据
 │           ├── education.json       # 学历和专业数据
 │           ├── political.json       # 政治面貌数据

@@ -90,9 +90,6 @@ class IdentityFormatter:
 
         data = [identity.to_dict(include_fields) for identity in identities]
 
-        if not data:
-            return "No data to display."
-
         # Get headers from first item
         headers = list(data[0].keys())
 
@@ -102,7 +99,10 @@ class IdentityFormatter:
             row = [str(item.get(h, "")) for h in headers]
             rows.append(row)
 
-        return tabulate(rows, headers=headers, tablefmt=tablefmt, maxcolwidths=30)
+        try:
+            return tabulate(rows, headers=headers, tablefmt=tablefmt, maxcolwidths=30)
+        except TypeError:
+            return tabulate(rows, headers=headers, tablefmt=tablefmt)
 
     @staticmethod
     def format_raw(identities: List[Identity]) -> str:
@@ -145,8 +145,6 @@ class IdentityFormatter:
             return ""
 
         data = [identity.to_dict(include_fields) for identity in identities]
-        if not data:
-            return ""
 
         lines = []
         headers = list(data[0].keys())
@@ -186,8 +184,6 @@ class IdentityFormatter:
             return ""
 
         data = [identity.to_dict(include_fields) for identity in identities]
-        if not data:
-            return ""
 
         headers = list(data[0].keys())
 
@@ -222,7 +218,7 @@ class IdentityFormatter:
             for key, value in data.items():
                 if value is not None:
                     if isinstance(value, str):
-                        escaped = value.replace('"', '\\"')
+                        escaped = str(value).replace('"', '\\"')
                         lines.append(f'    {key}: "{escaped}"')
                     else:
                         lines.append(f"    {key}: {value}")
@@ -263,7 +259,7 @@ class IdentityFormatter:
             if data.get("phone"):
                 lines.append(f"TEL:{data['phone']}")
             if data.get("address"):
-                addr = data["address"].replace(",", "\\,")
+                addr = str(data["address"]).replace(",", "\\,")
                 lines.append(f"ADR:;;{addr};;;;")
 
             lines.append("END:VCARD")

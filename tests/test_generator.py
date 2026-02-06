@@ -63,6 +63,23 @@ class TestIdentityGenerator:
         identities = generator.generate_batch(count=3)
         assert len(identities) == 3
 
+    def test_generate_batch_dedup_critical_fields(self):
+        """Test deduplication of critical fields in batch generation."""
+        config = IdentityConfig(
+            locale="zh_CN",
+            count=200,
+            seed=42,
+            include_fields=["ssn", "phone", "email", "username", "bank_card"],
+        )
+        generator = IdentityGenerator(config)
+        identities = generator.generate_batch()
+
+        assert len(identities) == 200
+
+        for field_name in ["ssn", "phone", "email", "username", "bank_card"]:
+            values = [getattr(identity, field_name) for identity in identities]
+            assert len(values) == len(set(values))
+
     def test_generate_with_field_filtering(self):
         """Test generation with field filtering."""
         config = IdentityConfig(locale="zh_CN", include_fields=["name", "email"])

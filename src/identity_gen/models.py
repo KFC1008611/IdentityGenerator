@@ -1,10 +1,10 @@
 """Pydantic data models for identity information."""
 
-from datetime import date, datetime
+from datetime import date
 from enum import Enum
-from typing import List, Optional, Set
+from typing import Dict, List, Optional, Set
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class OutputFormat(str, Enum):
@@ -134,7 +134,7 @@ class Identity(BaseModel):
     emergency_phone: Optional[str] = Field(None, description="Emergency contact phone")
     hobbies: Optional[str] = Field(None, description="Hobbies (兴趣爱好)")
 
-    def to_dict(self, include_fields: Optional[Set[str]] = None) -> dict:
+    def to_dict(self, include_fields: Optional[Set[str]] = None) -> Dict[str, object]:
         """Convert to dictionary with optional field filtering.
 
         Args:
@@ -150,7 +150,7 @@ class Identity(BaseModel):
 
     def get_field_names(self) -> List[str]:
         """Get list of available field names."""
-        return list(self.model_fields.keys())
+        return list(type(self).model_fields.keys())
 
 
 class IdentityConfig(BaseModel):
