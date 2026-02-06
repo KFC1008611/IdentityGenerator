@@ -14,7 +14,6 @@ class OutputFormat(str, Enum):
     CSV = "csv"
     TABLE = "table"
     RAW = "raw"
-    EXCEL = "excel"
     SQL = "sql"
     MARKDOWN = "markdown"
     YAML = "yaml"
