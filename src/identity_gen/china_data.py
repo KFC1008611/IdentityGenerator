@@ -163,14 +163,31 @@ def get_area_code_by_address(city_name: str, district: str = "") -> str:
     Returns:
         6-digit area code
     """
+    district = district.strip()
+
     # 查找省份和城市代码
-    for prov_code, prov_name in PROVINCES.items():
+    for prov_code, _prov_name in PROVINCES.items():
         if prov_code in CITIES:
             for city_code, c_name in CITIES[prov_code].items():
                 if c_name == city_name:
-                    # 返回前4位 + 随机2位 (模拟区县代码，01-99)
-                    district_code = str(random.randint(1, 99)).zfill(2)
-                    return f"{prov_code}{city_code}{district_code}"
+                    full_code = f"{prov_code}{city_code}"
+                    area_map = AREA_CODES.get(full_code, {})
+
+                    if district and district in area_map:
+                        return area_map[district]
+
+                    if district and full_code in DISTRICTS:
+                        for district_name in DISTRICTS[full_code]:
+                            if district_name == district and district_name in area_map:
+                                return area_map[district_name]
+
+                    if area_map:
+                        if district:
+                            return random.choice(list(area_map.values()))
+                        district_code = str(random.randint(1, 99)).zfill(2)
+                        return f"{prov_code}{city_code}{district_code}"
+
+                    return f"{full_code}{_ADDRESS_RULES.get('default_city_code', '01')}"
 
     # 默认返回北京东城区
     return _ADDRESS_RULES.get("default_area_code", "110101")
