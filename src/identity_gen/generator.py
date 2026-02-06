@@ -118,6 +118,16 @@ def generate_chinese_name(gender: Optional[str] = None) -> Tuple[str, str, str, 
     return full_name, given_name, surname, gender
 
 
+def _build_name_token(name: Optional[str]) -> str:
+    """Build a stable ASCII token from a name for account identifiers."""
+    if not name:
+        return ""
+    compact = "".join(ch for ch in name if ch.strip())[:3]
+    if not compact:
+        return ""
+    return "".join(str(ord(ch) % 10) for ch in compact)
+
+
 def generate_chinese_email(
     name: Optional[str] = None, phone: Optional[str] = None
 ) -> str:
@@ -133,6 +143,7 @@ def generate_chinese_email(
 
     pinyin_prefixes = _EMAIL_RULES.get("pinyin_prefixes", [])
 
+    name_token = _build_name_token(name)
     patterns = [
         lambda: f"{random.choice(pinyin_prefixes)}{random.randint(10, 9999)}",
         lambda: f"{random.choice(pinyin_prefixes)}_{random.randint(10, 999)}",
@@ -141,6 +152,8 @@ def generate_chinese_email(
         lambda: f"user{random.randint(1000, 9999999)}",
         lambda: f"a{random.randint(10000000, 99999999)}",
     ]
+    if name_token:
+        patterns.append(lambda: f"u{name_token}{random.randint(10, 9999)}")
 
     username = random.choice(patterns)()
     return f"{username}@{domain}"
@@ -174,7 +187,8 @@ def generate_chinese_username(name: Optional[str] = None) -> str:
         lambda p: f"user_{random.randint(1000, 999999)}",
     ]
 
-    prefix = random.choice(pinyin_prefixes)
+    name_token = _build_name_token(name)
+    prefix = f"u{name_token}" if name_token else random.choice(pinyin_prefixes)
     return random.choice(formats)(prefix)
 
 
