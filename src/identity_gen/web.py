@@ -21,6 +21,8 @@ WEB_OUTPUT_FORMATS = (
     OutputFormat.VCARD,
 )
 
+IDCARD_BASE_DIR = (Path.cwd() / "idcards").resolve()
+
 FORMAT_EXTENSIONS = {
     OutputFormat.JSON.value: "json",
     OutputFormat.CSV.value: "csv",
@@ -444,6 +446,20 @@ def _default_context(default_count: int) -> Dict[str, object]:
     }
 
 
+def _resolve_safe_idcard_dir(raw_value: str) -> Path:
+    """Resolve and validate idcard output directory under trusted base path."""
+    requested = Path((raw_value or "idcards/web").strip() or "idcards/web")
+    if requested.is_absolute():
+        candidate = requested.resolve()
+    else:
+        candidate = (Path.cwd() / requested).resolve()
+
+    if candidate != IDCARD_BASE_DIR and IDCARD_BASE_DIR not in candidate.parents:
+        raise ValueError("idcard_dir 必须位于 idcards 目录内")
+
+    return candidate
+
+
 def create_app(default_count: int = 10) -> Flask:
     """Create Flask application for web UI."""
     app = Flask(__name__)
@@ -518,7 +534,7 @@ def create_app(default_count: int = 10) -> Flask:
                     "auto" if not include_avatar else selected_avatar_backend
                 )
 
-                idcard_output = Path(idcard_dir)
+                idcard_output = _resolve_safe_idcard_dir(idcard_dir)
                 idcard_output.mkdir(parents=True, exist_ok=True)
                 idcard_generator = IDCardImageGenerator()
                 base_name = f"web_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
