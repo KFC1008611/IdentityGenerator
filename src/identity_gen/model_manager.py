@@ -352,8 +352,8 @@ class ModelManager:
                 actual_size_mb = sum(
                     f.stat().st_size for f in model_dir.rglob("*") if f.is_file()
                 ) / (1024 * 1024)
-            except:
-                pass
+            except OSError as e:
+                logger.warning(f"Failed to calculate model size for {model_key}: {e}")
 
         return {
             "key": model_key,
