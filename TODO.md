@@ -170,6 +170,56 @@
 - [ ] 添加生成进度显示
 - [ ] 支持更多模型格式（如 Safetensors）
 
+## 代码审计待办（2026-02-06）
+
+- [x] **audit-1**: 修复 `--stdout` 输出被日志/Logo 污染，确保可用于管道与机器解析
+  - 位置：`src/identity_gen/cli.py`
+  - 说明：当前 stdout 同时输出日志与数据，破坏结构化输出
+
+- [x] **audit-2**: 修复模型下载完整性判定逻辑，避免半下载/损坏模型被误判可用
+  - 位置：`src/identity_gen/model_config.py`
+  - 说明：目前命中任一关键文件即返回已下载
+
+- [x] **audit-3**: 限制 Web 端 `idcard_dir` 写入范围，防止任意路径写入
+  - 位置：`src/identity_gen/web.py`
+  - 说明：表单目录参数当前可直接用于落盘
+
+- [x] **audit-4**: 修正文档与实现不一致（`users.txt` 格式推断行为）
+  - 位置：`README.md`、`src/identity_gen/cli.py`
+  - 说明：README 声称未知后缀默认 CSV，但实现将 txt/text 映射为 TABLE
+
+- [x] **audit-5**: 修复 `preview --locale` 参数无效问题（参数未生效）
+  - 位置：`src/identity_gen/cli.py`
+  - 说明：命令接收 locale 但内部强制使用 `zh_CN`
+
+- [x] **audit-6**: 统一输出格式枚举与实现能力，处理 `EXCEL` 枚举孤岛
+  - 位置：`src/identity_gen/models.py`、`src/identity_gen/formatters.py`、`src/identity_gen/cli.py`
+  - 说明：模型定义包含 EXCEL，但 CLI 与 formatter 无对应实现
+
+- [x] **audit-7**: 修复配置保存失败被吞掉导致“假成功”问题
+  - 位置：`src/identity_gen/model_config.py`
+  - 说明：写配置失败仅日志记录，调用方仍按成功路径继续
+
+- [x] **audit-8**: 消除裸 `except`，改为显式异常并记录上下文
+  - 位置：`src/identity_gen/model_manager.py`
+  - 说明：静默吞错会降低排障能力
+
+- [x] **audit-9**: 清理未使用参数，避免接口语义与实现脱节
+  - 位置：`src/identity_gen/generator.py`
+  - 说明：如 `generate_chinese_email(name=...)`、`generate_chinese_username(name=...)` 未使用参数
+
+- [x] **audit-10**: 修复地址编码接口参数未生效与真实性不足问题
+  - 位置：`src/identity_gen/china_data.py`
+  - 说明：`get_area_code_by_address` 的 `district` 未参与计算且末两位随机
+
+- [x] **audit-11**: 增强 CLI 测试，补充 `--stdout` 纯净输出断言
+  - 位置：`tests/test_cli.py`
+  - 说明：当前测试多为关键词包含，难以发现输出污染
+
+- [x] **audit-12**: 增加 Web 路径安全测试，覆盖 `idcard_dir` 越界写入场景
+  - 位置：`tests/test_web.py`
+  - 说明：当前缺少路径边界与安全约束测试
+
 ---
 
 **最后更新**: 2026-02-06
