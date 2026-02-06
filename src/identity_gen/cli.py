@@ -34,7 +34,7 @@ def setup_logging(verbose: bool) -> None:
         level=log_level,
         format="%(asctime)s - %(levelname)s - %(message)s",
         datefmt="%H:%M:%S",
-        handlers=[logging.StreamHandler(sys.stdout)],
+        handlers=[logging.StreamHandler(sys.stderr)],
     )
 
 
@@ -52,8 +52,6 @@ def detect_format_from_extension(filename: str) -> Optional[OutputFormat]:
     format_map = {
         "json": OutputFormat.JSON,
         "csv": OutputFormat.CSV,
-        "txt": OutputFormat.TABLE,
-        "text": OutputFormat.TABLE,
         "sql": OutputFormat.SQL,
         "md": OutputFormat.MARKDOWN,
         "markdown": OutputFormat.MARKDOWN,
@@ -243,8 +241,8 @@ def cli(
     """
     setup_logging(verbose)
 
-    # Print logo for main command
-    if ctx.invoked_subcommand is None:
+    # Print logo for main command (skip in --stdout mode)
+    if ctx.invoked_subcommand is None and not stdout:
         console.print(Text(LOGO, style="bold cyan"))
 
     # If no subcommand, run default generation
@@ -442,13 +440,13 @@ def locales() -> None:
 @click.option(
     "--locale",
     "-l",
-    default="en_US",
+    default="zh_CN",
+    type=click.Choice(["zh_CN"], case_sensitive=False),
     help="Locale for preview",
 )
 def preview(locale: str) -> None:
     """Generate a sample identity for preview."""
-    # Force zh_CN locale for preview
-    config = IdentityConfig(locale="zh_CN", count=1, format=OutputFormat.TABLE)
+    config = IdentityConfig(locale=locale, count=1, format=OutputFormat.TABLE)
     generator = IdentityGenerator(config)
     identity = generator.generate()
 
@@ -717,7 +715,11 @@ def model_configure() -> None:
                 )
 
         # Set as selected model
-        config_manager.set_selected_model(selected_key)
+        if not config_manager.set_selected_model(selected_key):
+            console.print(
+                "\n[red]✗ Failed to persist model configuration. Please check write permissions.[/red]"
+            )
+            sys.exit(1)
         console.print(
             f"\n[bold green]✓ {selected_model['name']} is now configured for avatar generation![/bold green]"
         )

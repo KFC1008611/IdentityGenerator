@@ -1,5 +1,7 @@
 """Tests for CLI."""
 
+import json
+
 from click.testing import CliRunner
 import pytest
 from identity_gen.cli import cli
@@ -62,6 +64,11 @@ class TestCLI:
     def test_cli_preview_command(self, runner):
         """Test preview subcommand."""
         result = runner.invoke(cli, ["preview"])
+        assert result.exit_code == 0
+
+    def test_cli_preview_locale_option(self, runner):
+        """Preview should accept locale option and apply it."""
+        result = runner.invoke(cli, ["preview", "--locale", "zh_CN"])
         assert result.exit_code == 0
 
     def test_cli_invalid_locale(self, runner):
@@ -148,6 +155,19 @@ class TestCLI:
             assert output_file.exists(), f"File not created for format {fmt}"
             content = output_file.read_text()
             assert len(content) > 0, f"Empty output for format {fmt}"
+
+    def test_cli_stdout_json_is_clean_machine_readable(self, runner):
+        """--stdout should output pure structured data to stdout."""
+        result = runner.invoke(
+            cli,
+            ["--format", "json", "--count", "1", "--stdout", "--seed", "42"],
+        )
+        assert result.exit_code == 0
+
+        parsed = json.loads(result.stdout)
+        assert isinstance(parsed, list)
+        assert len(parsed) == 1
+        assert "name" in parsed[0]
 
     def test_cli_server_option_invokes_web_server(self, runner, monkeypatch):
         """Test --server option dispatches to Flask entrypoint."""
