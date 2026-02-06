@@ -51,10 +51,16 @@ def test_is_model_downloaded_checks_essential_files(tmp_path) -> None:
     model_dir = manager.get_model_dir("tiny-sd")
     assert manager.is_model_downloaded("tiny-sd") is False
 
+    (model_dir / "model_index.json").parent.mkdir(parents=True, exist_ok=True)
+    (model_dir / "model_index.json").write_text("{}", encoding="utf-8")
     (model_dir / "unet").mkdir(parents=True, exist_ok=True)
     (model_dir / "unet" / "diffusion_pytorch_model.bin").write_text(
         "x", encoding="utf-8"
     )
+    assert manager.is_model_downloaded("tiny-sd") is False
+
+    (model_dir / "text_encoder").mkdir(parents=True, exist_ok=True)
+    (model_dir / "text_encoder" / "model.safetensors").write_text("x", encoding="utf-8")
     assert manager.is_model_downloaded("tiny-sd") is True
 
 
@@ -195,6 +201,18 @@ def test_save_config_exception_branch(tmp_path, monkeypatch) -> None:
 
     monkeypatch.setattr("builtins.open", bad_open)
     manager.reset_configuration()
+
+
+def test_set_selected_model_returns_false_when_save_fails(
+    tmp_path, monkeypatch
+) -> None:
+    manager = ModelConfigManager(config_dir=tmp_path)
+
+    def bad_open(*_args, **_kwargs):
+        raise OSError("nope")
+
+    monkeypatch.setattr("builtins.open", bad_open)
+    assert manager.set_selected_model("tiny-sd") is False
 
 
 def test_get_config_manager_singleton(monkeypatch, tmp_path) -> None:

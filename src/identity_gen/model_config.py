@@ -114,13 +114,24 @@ class ModelConfigManager:
             "cache_dir": str(self.cache_dir),
         }
 
-    def _save_config(self) -> None:
+    def _save_config(self) -> bool:
         """Save configuration to file."""
         try:
             with open(self.config_file, "w", encoding="utf-8") as f:
                 json.dump(self._config, f, indent=2, ensure_ascii=False)
+            return True
         except Exception as e:
             logger.error(f"Failed to save config: {e}")
+            return False
+
+    @staticmethod
+    def _has_any_file(model_dir: Path, candidates: list[str]) -> bool:
+        """Return True when any candidate file exists and is non-empty."""
+        for relative in candidates:
+            path = model_dir / relative
+            if path.exists() and path.is_file() and path.stat().st_size > 0:
+                return True
+        return False
 
     def get_model_dir(self, model_key: str) -> Path:
         """Get the cache directory for a specific model."""
@@ -132,18 +143,31 @@ class ModelConfigManager:
         if not model_dir.exists():
             return False
 
-        # Check for essential model files
-        essential_files = [
-            "model_index.json",
-            "unet/diffusion_pytorch_model.bin",
-            "text_encoder/model.safetensors",
-        ]
+        # Check mandatory index + required component files
+        model_index = model_dir / "model_index.json"
+        if not (
+            model_index.exists()
+            and model_index.is_file()
+            and model_index.stat().st_size > 0
+        ):
+            return False
 
-        for file in essential_files:
-            if (model_dir / file).exists():
-                return True
+        has_unet = self._has_any_file(
+            model_dir,
+            [
+                "unet/diffusion_pytorch_model.bin",
+                "unet/diffusion_pytorch_model.safetensors",
+            ],
+        )
+        has_text_encoder = self._has_any_file(
+            model_dir,
+            [
+                "text_encoder/model.safetensors",
+                "text_encoder/pytorch_model.bin",
+            ],
+        )
 
-        return False
+        return has_unet and has_text_encoder
 
     def get_model_config(self, model_key: str) -> Optional[ModelConfig]:
         """Get configuration for a specific model."""
@@ -193,8 +217,7 @@ class ModelConfigManager:
             return False
 
         self._config["selected_model"] = model_key
-        self._save_config()
-        return True
+        return self._save_config()
 
     def add_custom_model(
         self,
@@ -223,8 +246,7 @@ class ModelConfigManager:
             "guidance_scale": guidance_scale,
             "num_inference_steps": num_inference_steps,
         }
-        self._save_config()
-        return True
+        return self._save_config()
 
     def remove_custom_model(self, key: str) -> bool:
         """Remove a custom model configuration."""
@@ -235,8 +257,7 @@ class ModelConfigManager:
             if self._config.get("selected_model") == key:
                 self._config["selected_model"] = None
 
-            self._save_config()
-            return True
+            return self._save_config()
         return False
 
     def get_cache_dir(self) -> Path:
